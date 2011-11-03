@@ -55,7 +55,6 @@ import org.codehaus.jackson.JsonToken;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthRequest;
 import org.elasticsearch.action.admin.indices.create.CreateIndexRequest;
 import org.elasticsearch.action.admin.indices.exists.IndicesExistsRequest;
-import org.elasticsearch.action.admin.indices.optimize.OptimizeResponse;
 import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.client.AdminClient;
 import org.elasticsearch.client.Client;
@@ -154,10 +153,6 @@ public class MultiThreadElasticSearchIndexer {
                         .put("merge.policy.merge_factor", 10).build();
         adminClient.indices().prepareUpdateSettings(indexName).setSettings(settings).execute().actionGet();
         LOG.info("index.refresh_interval set to 1s");
-        
-        // Call optimize
-        OptimizeResponse or = adminClient.indices().prepareOptimize(indexName).setMaxNumSegments(5).execute().actionGet();
-        LOG.info(String.format("optimize.max_num_segments set to 5: %s", (or.successfulShards() == or.failedShards() ? "succeeded" : "failed")));
     }
     
     public void indexHBaseData(Calendar startCal, Calendar endCal) throws InterruptedException, ExecutionException {

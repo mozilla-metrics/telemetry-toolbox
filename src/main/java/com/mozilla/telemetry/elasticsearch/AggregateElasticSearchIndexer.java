@@ -51,11 +51,12 @@ public class AggregateElasticSearchIndexer {
     
     private String indexName;
     private String typeName;
+    private String aliasName;
     private Node node;
     private Client client;
     private AdminClient adminClient;
     
-    public AggregateElasticSearchIndexer(String indexName, String typeName) throws IOException {
+    public AggregateElasticSearchIndexer(String indexName, String typeName, String aliasName) throws IOException {
         this.conf = new Configuration();
         this.fs = FileSystem.get(conf);
         
@@ -63,6 +64,7 @@ public class AggregateElasticSearchIndexer {
         this.client = node.client();
         this.indexName = indexName;
         this.typeName = typeName;
+        this.aliasName = aliasName;
     }
     
     public void close() {
@@ -110,9 +112,10 @@ public class AggregateElasticSearchIndexer {
         adminClient.indices().prepareUpdateSettings(indexName).setSettings(settings).execute().actionGet();
         LOG.info("index.refresh_interval set to 1s");
         
-        // Call optimize
-        //OptimizeResponse or = adminClient.indices().prepareOptimize(indexName).setMaxNumSegments(5).execute().actionGet();
-        //LOG.info(String.format("optimize.max_num_segments set to 5: %s", (or.successfulShards() == or.failedShards() ? "succeeded" : "failed")));
+        if (aliasName != null) {
+            boolean success = adminClient.indices().prepareAliases().addAlias(indexName, aliasName).execute().actionGet().acknowledged();
+            LOG.info(String.format("index alias creation: %s", (success ? "succeeded" : "failed")));
+        }
     }
     
     public void indexHDFSData(String inputPath) throws IOException {
@@ -221,7 +224,7 @@ public class AggregateElasticSearchIndexer {
     public static void main(String[] args) throws IOException, ParseException {        
         AggregateElasticSearchIndexer esi = null;
         try {
-            esi = new AggregateElasticSearchIndexer("telemetry_agg_"+args[0], "data");
+            esi = new AggregateElasticSearchIndexer("telemetry_agg_"+args[0], "data", "telemetry");
             esi.prepareIndexForBulk();
             esi.indexHDFSData(args[1]);
             esi.prepareIndexForQuery();

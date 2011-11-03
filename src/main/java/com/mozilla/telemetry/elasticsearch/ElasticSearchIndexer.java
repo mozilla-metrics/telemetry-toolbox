@@ -291,29 +291,12 @@ public class ElasticSearchIndexer {
         }
         
         ElasticSearchIndexer esi = null;
-//        BufferedReader reader = null;
-//        BufferedWriter writer = null;
         try {
-//            reader = new BufferedReader(new InputStreamReader(new FileInputStream("/Users/xstevens/desktop/telemetry.js")));
-//            writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("/Users/xstevens/desktop/telemetry-modified.js")));
-//            StringBuilder sb = new StringBuilder();
-//            String line = null;
-//            while ((line = reader.readLine()) != null) {
-//                sb.append(line);
-//            }
-//            esi = new ElasticSearchIndexer();
-//            writer.write(esi.modifyJSON("20111025", sb.toString().getBytes()));
             esi = new ElasticSearchIndexer("telemetry_"+args[0], "data", "telemetry", "data", "json");
             esi.prepareIndexForBulk();
             esi.indexHBaseData(startCal, endCal, args[0], resumeAfterNum);
             esi.prepareIndexForQuery();
         } finally {
-//            if (reader != null) {
-//                reader.close();
-//            }
-//            if (writer != null) {
-//                writer.close();
-//            }
             if (esi != null) {
                 esi.close();
             }
