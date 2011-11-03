@@ -1,0 +1,46 @@
+#!/bin/bash
+
+function usage() {
+  echo "Usage: $0 [yyyyMMdd] [hdfs-input-path]"
+  exit 1
+}
+
+[[ $# -ne 2 ]] && usage
+
+DAY=$1
+INPUT_PATH=$2
+
+bin=`dirname "$0"`
+bin=`cd "$bin"; pwd`
+
+ES_CONF_PATH="$bin/../conf/elasticsearch.yml"
+SERVER_CLASS_NAME="com.mozilla.telemetry.elasticsearch.AggregateElasticSearchIndexer"
+JAVA_OPTS="-Xms1024m -Xmx1024m -XX:+UseParallelGC -Djava.net.preferIPv4Stack=true -Des.config=$ES_CONF_PATH -telemetry.log.dir=$bin/../logs"
+
+# if this is a developer then use the main jar in the build directory
+if [ -d $bin/../build/lib ]; then
+    MAIN_JAR_PATH="$bin/../build/lib/telemetry-toolbox-*.jar"
+else
+    MAIN_JAR_PATH="$bin/../telemetry-toolbox-*.jar"
+fi
+
+CLASSPATH="$bin/../conf"
+# add main jar
+for lib in `ls $MAIN_JAR_PATH`; do
+    CLASSPATH=${CLASSPATH}:$lib
+done    
+
+# add dependency libs
+for lib in `ls $bin/../lib/*.jar`; do
+    CLASSPATH=${CLASSPATH}:$lib
+done
+
+# create logs dir if it doesn't exist
+if [ ! -d $bin/../logs ]; then
+    mkdir -p $bin/../logs
+fi
+
+java $JAVA_OPTS -cp $CLASSPATH $SERVER_CLASS_NAME $DAY $INPUT_PATH 
+RETVAL=$?
+
+exit $RETVAL
