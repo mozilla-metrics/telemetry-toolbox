@@ -63,7 +63,7 @@ public class SimpleMeasureTuples extends EvalFunc<DataBag> {
         if (t < 0) {
             bucket = "-1";
         } else if (t >= 0 && t < 30000) {
-            bucket = String.valueOf((long)Math.round((double)t / 1000.0d));
+            bucket = String.valueOf((long)Math.round((double)t / 1000.0d) * 1000);
         } else {
             bucket = "30001";
         }
