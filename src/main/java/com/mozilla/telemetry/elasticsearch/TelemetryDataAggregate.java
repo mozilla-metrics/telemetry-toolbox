@@ -24,17 +24,28 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.codehaus.jackson.annotate.JsonAutoDetect;
+import org.codehaus.jackson.annotate.JsonAutoDetect.Visibility;
 import org.codehaus.jackson.annotate.JsonProperty;
 
+@JsonAutoDetect(getterVisibility=Visibility.NONE)
 public class TelemetryDataAggregate {
 
+    @JsonAutoDetect(getterVisibility=Visibility.NONE)
     public static class Info {
+        @JsonProperty("appName")
         private String appName;
+        @JsonProperty("appVersion")
         private String appVersion;
-        @JsonProperty("OS") private String OS;
-        @JsonProperty("appBuildID") private String appBuildId;
-        @JsonProperty("platformBuildID") private String platformBuildId;
+        @JsonProperty("OS")
+        private String OS;
+        @JsonProperty("appBuildID")
+        private String appBuildId;
+        @JsonProperty("platformBuildID")
+        private String platformBuildId;
+        @JsonProperty("arch")
         private String arch;
+        @JsonProperty("version")
         private String version;
         
         public String getAppName() {
@@ -81,11 +92,17 @@ public class TelemetryDataAggregate {
         }
     }
     
+    @JsonAutoDetect(getterVisibility=Visibility.NONE)
     public static class Histogram {
         
+        @JsonProperty("values")
         private List<int[]> values = new ArrayList<int[]>();
+        @JsonProperty("count")
         private int count;
+        @JsonProperty("sum")
         private long sum;
+        @JsonProperty("bucket_count")
+        private int bucketCount;
         
         public List<int[]> getValues() {
             return values;
@@ -118,10 +135,23 @@ public class TelemetryDataAggregate {
         public void setSum(long sum) {
             this.sum = sum;
         }
+
+        public int getBucketCount() {
+            return bucketCount;
+        }
+
+        public void setBucketCount(int bucketCount) {
+            this.bucketCount = bucketCount;
+        }
     }
     
+    @JsonProperty("date")
     private String date;
+    @JsonProperty("info")
     private Info info;
+    @JsonProperty("histogram_names")
+    private List<String> histogramNames = new ArrayList<String>();
+    @JsonProperty("histograms")
     private Map<String,Histogram> histograms = new HashMap<String,Histogram>();
     
     public String getDate() {
@@ -158,6 +188,7 @@ public class TelemetryDataAggregate {
 
         hist.addValue(new int[] { Integer.parseInt(histValueKey), histValue });
         histograms.put(key, hist);
+        histogramNames.add(key);
     }
     
     public void incrementHistogramCount(String key, int count) {
@@ -182,4 +213,24 @@ public class TelemetryDataAggregate {
         
         hist.setSum(sum);
     }
+    
+    public void setHistogramBucketCount(String key, int bucketCount) {
+        Histogram hist = null;
+        if (histograms.containsKey(key)) {
+            hist = histograms.get(key);
+        } else {
+            hist = new Histogram();
+        }
+        
+        hist.setBucketCount(bucketCount);
+    }
+
+    public List<String> getHistogramNames() {
+        return histogramNames;
+    }
+
+    public void setHistogramNames(List<String> histogramNames) {
+        this.histogramNames = histogramNames;
+    }
+    
 }

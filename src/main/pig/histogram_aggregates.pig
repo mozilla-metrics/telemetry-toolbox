@@ -1,5 +1,6 @@
 /* Aggregate all histograms in a single pass */
-register './akela-0.2-SNAPSHOT.jar'
+register 'akela-0.2-SNAPSHOT.jar'
+register 'telemetry-toolbox-0.1-SNAPSHOT.jar'
 
 SET pig.logfile telemetry-hist-aggregates.log;
 SET default_parallel 8;

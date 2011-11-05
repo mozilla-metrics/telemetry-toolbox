@@ -1,5 +1,6 @@
 /* Get the total number of submissions for each day and count them by product and version */
 register 'akela-0.2-SNAPSHOT.jar'
+register 'telemetry-toolbox-0.1-SNAPSHOT.jar'
 
 raw = LOAD 'hbase://telemetry' USING com.mozilla.pig.load.HBaseMultiScanLoader('$start_date', '$end_date', 'yyyyMMdd', 'data:json') AS (k:chararray, json:chararray);
 genmap = FOREACH raw GENERATE SUBSTRING(k,1,9) AS d:chararray, com.mozilla.pig.eval.json.JsonMap(json) AS json_map:map[];

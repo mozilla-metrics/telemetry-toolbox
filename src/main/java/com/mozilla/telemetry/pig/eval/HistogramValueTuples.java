@@ -52,12 +52,17 @@ public class HistogramValueTuples extends EvalFunc<DataBag> {
                         if (hv.containsKey("sum")) {
                             sum = ((Number)hv.get("sum")).longValue();
                         }
+                        int bucketCount = 0;
+                        if (hv.containsKey("bucket_count")) {
+                            bucketCount = ((Number)hv.get("bucket_count")).intValue();
+                        }
                         for (Map.Entry<String, Object> v : values.entrySet()) {
-                            Tuple t = tupleFactory.newTuple(4);
+                            Tuple t = tupleFactory.newTuple(5);
                             t.set(0, hist.getKey());
                             t.set(1, v.getKey());
                             t.set(2, ((Number)v.getValue()).doubleValue());
                             t.set(3, sum);
+                            t.set(4, bucketCount);
                             output.add(t);
                         }
                     }

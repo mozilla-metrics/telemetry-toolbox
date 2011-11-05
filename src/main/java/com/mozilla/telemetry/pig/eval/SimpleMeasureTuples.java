@@ -62,8 +62,8 @@ public class SimpleMeasureTuples extends EvalFunc<DataBag> {
         String bucket = "0";
         if (t < 0) {
             bucket = "-1";
-        } else if (t > 0 && t < 30000) {
-            bucket = String.valueOf(t);
+        } else if (t >= 0 && t < 30000) {
+            bucket = String.valueOf((long)Math.round((double)t / 1000.0d));
         } else {
             bucket = "30001";
         }
@@ -87,24 +87,34 @@ public class SimpleMeasureTuples extends EvalFunc<DataBag> {
                 if (vo != null && vo instanceof Map) {
                     for (Map.Entry<String, Object> js : ((Map<String,Object>)vo).entrySet()) {
                         long timeValue = ((Number)js.getValue()).longValue();
-                        Tuple t = tupleFactory.newTuple(4);
+                        Tuple t = tupleFactory.newTuple(5);
                         t.set(0, measureKey + "_" + js.getKey().toUpperCase());
                         t.set(1, bucketGenericTime(timeValue));
                         t.set(2, 1.0d);
                         t.set(3, timeValue);
+                        t.set(4, 32);
                         output.add(t);
                     }
                 } else if (vo != null) {
                     long timeValue = ((Number)vo).longValue();
-                    Tuple t = tupleFactory.newTuple(4);
+                    Tuple t = tupleFactory.newTuple(5);
                     t.set(0, measureKey);
+                    
+                    int bucketCount = 0;
                     if ("uptime".equals(measure.getKey())) {
                         t.set(1, bucketUptime(timeValue));
+                        bucketCount = 3;
+                    } else if ("startupInterrupted".equals(measure.getKey())) {
+                        t.set(1, String.valueOf(timeValue));
+                        bucketCount = 2;
                     } else {
                         t.set(1, bucketGenericTime(timeValue));
+                        bucketCount = 32;
                     }
+                    
                     t.set(2, 1.0d);
                     t.set(3, timeValue);
+                    t.set(4, bucketCount);
                     output.add(t);
                 }
             }

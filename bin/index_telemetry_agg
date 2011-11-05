@@ -15,7 +15,7 @@ bin=`cd "$bin"; pwd`
 
 ES_CONF_PATH="$bin/../conf/elasticsearch.yml"
 SERVER_CLASS_NAME="com.mozilla.telemetry.elasticsearch.AggregateElasticSearchIndexer"
-JAVA_OPTS="-Xms1024m -Xmx1024m -XX:+UseParallelGC -Djava.net.preferIPv4Stack=true -Des.config=$ES_CONF_PATH -telemetry.log.dir=$bin/../logs"
+JAVA_OPTS="-Xms1024m -Xmx1024m -XX:+UseParallelGC -Djava.net.preferIPv4Stack=true -Des.config=$ES_CONF_PATH -Dtelemetrytoolbox.log.dir=$bin/../logs"
 
 # if this is a developer then use the main jar in the build directory
 if [ -d $bin/../build/lib ]; then

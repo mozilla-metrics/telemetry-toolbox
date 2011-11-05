@@ -194,6 +194,8 @@ public class AggregateElasticSearchIndexer {
                     tdata.incrementHistogramCount(splits[8], Integer.parseInt(splits[11]));
                     // set the histogram sum
                     tdata.setHistogramSum(splits[8], (long)Double.parseDouble(splits[12]));
+                    // set the histogram bucket count
+                    tdata.setHistogramBucketCount(splits[8], Integer.parseInt(splits[13]));
                     
                     prevSplits = splits;
                 }

@@ -1,8 +1,9 @@
 /* Aggregate all telemetry data in preparation for indexing the results using AggregateElasticSearchIndexer */
 register 'akela-0.2-SNAPSHOT.jar'
+register 'telemetry-toolbox-0.1-SNAPSHOT.jar'
 
 SET pig.logfile telemetry-aggregates.log;
-SET default_parallel 8;
+SET default_parallel 16;
 SET pig.tmpfilecompression true;
 SET pig.tmpfilecompression.codec lzo;
 
@@ -19,8 +20,11 @@ hist_values = FOREACH filtered_genmap GENERATE SUBSTRING(k,1,9) AS d:chararray,
                                                (chararray)json_map#'info'#'version' AS os_version:chararray,
                                                (chararray)json_map#'info'#'appBuildID' AS app_build_id:chararray,
                                                (chararray)json_map#'info'#'platformBuildID' AS plat_build_id:chararray,
-                                               FLATTEN(com.mozilla.telemetry.pig.eval.HistogramValueTuples(json_map#'histograms')) AS (hist_name:chararray, v:chararray, count:double, sum:long);
+                                               FLATTEN(com.mozilla.telemetry.pig.eval.HistogramValueTuples(json_map#'histograms')) AS (hist_name:chararray, v:chararray, count:double, sum:long, bucket_count:int);
 
+hist_by_name_and_v = GROUP hist_values BY (d,product,product_version,arch,os,os_version,app_build_id,plat_build_id,hist_name,v);
+hist_sums = FOREACH hist_by_name_and_v GENERATE FLATTEN(group) AS (d,product,product_version,arch,os,os_version,app_build_id,plat_build_id,hist_name,v), SUM(hist_values.count) AS sum_count, COUNT(hist_values) AS doc_count, SUM(hist_values.sum) AS sum_sum, MAX(hist_values.bucket_count) AS max_bucket_count;
+                                               
 simple_measures = FOREACH filtered_genmap GENERATE SUBSTRING(k,1,9) AS d:chararray, 
                                                (chararray)json_map#'info'#'appName' AS product:chararray,
                                                (chararray)json_map#'info'#'appVersion' AS product_version:chararray, 
@@ -29,13 +33,14 @@ simple_measures = FOREACH filtered_genmap GENERATE SUBSTRING(k,1,9) AS d:chararr
                                                (chararray)json_map#'info'#'version' AS os_version:chararray,
                                                (chararray)json_map#'info'#'appBuildID' AS app_build_id:chararray,
                                                (chararray)json_map#'info'#'platformBuildID' AS plat_build_id:chararray,
-                                               FLATTEN(com.mozilla.telemetry.pig.eval.SimpleMeasureTuples(json_map#'simpleMeasurements')) AS (hist_name:chararray, v:chararray, count:double, sum:long);
+                                               FLATTEN(com.mozilla.telemetry.pig.eval.SimpleMeasureTuples(json_map#'simpleMeasurements')) AS (hist_name:chararray, v:chararray, count:double, sum:long, bucket_count:int);
 
-unified = UNION hist_values,simple_measures;
-by_name_and_v = GROUP unified BY (d,product,product_version,arch,os,os_version,app_build_id,plat_build_id,hist_name,v);
-sums = FOREACH by_name_and_v GENERATE FLATTEN(group) AS (d,product,product_version,arch,os,os_version,app_build_id,plat_build_id,hist_name,v), SUM(unified.count) AS sum_count, COUNT(unified) AS doc_count, SUM(unified.sum) AS sum_sum;
+sm_by_name_and_v = GROUP simple_measures BY (d,product,product_version,arch,os,os_version,app_build_id,plat_build_id,hist_name,v);
+sm_sums = FOREACH sm_by_name_and_v GENERATE FLATTEN(group) AS (d,product,product_version,arch,os,os_version,app_build_id,plat_build_id,hist_name,v), SUM(simple_measures.count) AS sum_count, COUNT(simple_measures) AS doc_count, SUM(simple_measures.sum) AS sum_sum, MAX(simple_measures.bucket_count) AS max_bucket_count;
 
-STORE sums INTO 'telemetry-aggregates-$start_date-$end_date' USING PigStorage();
+unified = UNION hist_sums,sm_sums;
+ordered = ORDER unified BY d,product,product_version,arch,os,os_version,app_build_id,plat_build_id;
+STORE ordered INTO 'telemetry-aggregates-$start_date-$end_date' USING PigStorage();
 
 /* Localhost example for my own testing (not exactly the same as above)*/
 /*
