@@ -86,20 +86,25 @@ public class AggregateElasticSearchIndexer {
     public void prepareIndexForBulk() {
         // Make sure to have the index available.
         adminClient = client.admin();
-        if (!adminClient.indices().prepareExists(indexName).execute().actionGet().exists()) {
-            LOG.info(String.format("Creating missing index '%s'", indexName));
-            Settings settings = ImmutableSettings.settingsBuilder().put("index.number_of_replicas", 0).build();
-            boolean success = adminClient.indices().prepareCreate(indexName).setSettings(settings).execute().actionGet().acknowledged();
-            LOG.info(String.format("index.number_of_replicas set to 0: %s", (success ? "succeeded" : "failed")));
+        if (adminClient.indices().prepareExists(indexName).execute().actionGet().exists()) {
+            LOG.info(String.format("Deleting existing index '%s'", indexName));
+            boolean success = adminClient.indices().prepareDelete(indexName).execute().actionGet().acknowledged();
+            LOG.info(String.format("delete index: %s", (success ? "succeeded" : "failed")));
         }
+        
+        LOG.info(String.format("Creating index '%s'", indexName));
+        Settings settings = ImmutableSettings.settingsBuilder().put("index.number_of_replicas", 0).build();
+        boolean success = adminClient.indices().prepareCreate(indexName).setSettings(settings).execute().actionGet().acknowledged();
+        LOG.info(String.format("index.number_of_replicas set to 0: %s", (success ? "succeeded" : "failed")));
+        
         LOG.info(String.format("Waiting for index '%s'...", indexName));
         adminClient.cluster().prepareHealth(indexName).setWaitForNodes(">0").execute().actionGet();
         
         // Set refresh interval to -1
-        Settings settings = ImmutableSettings.settingsBuilder()
-                                .put("index.refresh_interval", "-1")
-                                .put("merge.policy.merge_factor", 30).build();
-        adminClient.indices().prepareUpdateSettings(indexName).setSettings(settings).execute().actionGet();
+        Settings updateSettings = ImmutableSettings.settingsBuilder()
+                                    .put("index.refresh_interval", "-1")
+                                    .put("merge.policy.merge_factor", 30).build();
+        adminClient.indices().prepareUpdateSettings(indexName).setSettings(updateSettings).execute().actionGet();
         LOG.info("index.refresh_interval set to -1");
     }
     
@@ -189,13 +194,17 @@ public class AggregateElasticSearchIndexer {
                     }
                     
                     // Add histogram entry
-                    tdata.addOrPutHistogramValue(splits[8], splits[9], (int)Float.parseFloat(splits[10]));
+                    tdata.addOrPutHistogramValue(splits[8], splits[9], (int)Float.parseFloat(splits[14]));
                     // increment histogram count
-                    tdata.incrementHistogramCount(splits[8], Integer.parseInt(splits[11]));
+                    tdata.incrementHistogramCount(splits[8], Integer.parseInt(splits[15]));
                     // set the histogram sum
-                    tdata.setHistogramSum(splits[8], (long)Double.parseDouble(splits[12]));
+                    tdata.setHistogramSum(splits[8], (long)Double.parseDouble(splits[16]));
                     // set the histogram bucket count
-                    tdata.setHistogramBucketCount(splits[8], Integer.parseInt(splits[13]));
+                    tdata.setHistogramBucketCount(splits[8], Integer.parseInt(splits[10]));
+                    // set the hisotgram range
+                    tdata.setHistogramRange(splits[8], Integer.parseInt(splits[11]), Integer.parseInt(splits[12]));
+                    // set the histogram type
+                    tdata.setHistogramType(splits[8], Integer.parseInt(splits[13]));
                     
                     prevSplits = splits;
                 }

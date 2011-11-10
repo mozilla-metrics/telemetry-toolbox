@@ -86,35 +86,48 @@ public class SimpleMeasureTuples extends EvalFunc<DataBag> {
                 Object vo = measure.getValue();
                 if (vo != null && vo instanceof Map) {
                     for (Map.Entry<String, Object> js : ((Map<String,Object>)vo).entrySet()) {
-                        long timeValue = ((Number)js.getValue()).longValue();
-                        Tuple t = tupleFactory.newTuple(5);
+                        long booleanNum = ((Number)js.getValue()).longValue();
+                        Tuple t = tupleFactory.newTuple(8);
                         t.set(0, measureKey + "_" + js.getKey().toUpperCase());
-                        t.set(1, bucketGenericTime(timeValue));
+                        t.set(1, booleanNum);
                         t.set(2, 1.0d);
-                        t.set(3, timeValue);
-                        t.set(4, 32);
+                        t.set(3, booleanNum);
+                        t.set(4, 2);
+                        t.set(5, 0);
+                        t.set(6, 1);
+                        t.set(7, 2);
                         output.add(t);
                     }
                 } else if (vo != null) {
                     long timeValue = ((Number)vo).longValue();
-                    Tuple t = tupleFactory.newTuple(5);
+                    Tuple t = tupleFactory.newTuple(8);
                     t.set(0, measureKey);
                     
                     int bucketCount = 0;
+                    int minRange = 0, maxRange = 0;
+                    int histogramType = 0;
                     if ("uptime".equals(measure.getKey())) {
                         t.set(1, bucketUptime(timeValue));
                         bucketCount = 3;
+                        maxRange = 1441;
                     } else if ("startupInterrupted".equals(measure.getKey())) {
                         t.set(1, String.valueOf(timeValue));
                         bucketCount = 2;
+                        maxRange = 1;
+                        histogramType = 2;
                     } else {
                         t.set(1, bucketGenericTime(timeValue));
-                        bucketCount = 32;
+                        bucketCount = 31;
+                        maxRange = 30001;
+                        histogramType = 1;
                     }
                     
                     t.set(2, 1.0d);
                     t.set(3, timeValue);
                     t.set(4, bucketCount);
+                    t.set(5, minRange);
+                    t.set(6, maxRange);
+                    t.set(7, histogramType);
                     output.add(t);
                 }
             }

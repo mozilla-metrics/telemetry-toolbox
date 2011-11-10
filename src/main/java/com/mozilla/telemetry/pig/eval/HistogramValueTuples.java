@@ -20,6 +20,7 @@
 package com.mozilla.telemetry.pig.eval;
 
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.Map;
 
 import org.apache.pig.EvalFunc;
@@ -56,13 +57,34 @@ public class HistogramValueTuples extends EvalFunc<DataBag> {
                         if (hv.containsKey("bucket_count")) {
                             bucketCount = ((Number)hv.get("bucket_count")).intValue();
                         }
+                        int minRange = 0, maxRange = 0;
+                        if (hv.containsKey("range")) {
+                            DataBag rangeBag = (DataBag)hv.get("range");
+                            Iterator<Tuple> rangeIter = rangeBag.iterator();
+                            Tuple rangeTuple = rangeIter.next();
+                            if (rangeTuple.size() >= 2) {
+                                if (rangeTuple.get(0) instanceof Number) {
+                                    minRange = ((Number)rangeTuple.get(0)).intValue();
+                                }
+                                if (rangeTuple.get(1) instanceof Number) {
+                                    maxRange = ((Number)rangeTuple.get(1)).intValue();
+                                }
+                            }
+                        }
+                        int histogramType = 0;
+                        if (hv.containsKey("histogram_type")) {
+                            histogramType = ((Number)hv.get("histogram_type")).intValue();
+                        }
                         for (Map.Entry<String, Object> v : values.entrySet()) {
-                            Tuple t = tupleFactory.newTuple(5);
+                            Tuple t = tupleFactory.newTuple(8);
                             t.set(0, hist.getKey());
                             t.set(1, v.getKey());
                             t.set(2, ((Number)v.getValue()).doubleValue());
                             t.set(3, sum);
                             t.set(4, bucketCount);
+                            t.set(5, minRange);
+                            t.set(6, maxRange);
+                            t.set(7, histogramType);
                             output.add(t);
                         }
                     }

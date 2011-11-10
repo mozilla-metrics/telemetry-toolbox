@@ -103,6 +103,10 @@ public class TelemetryDataAggregate {
         private long sum;
         @JsonProperty("bucket_count")
         private int bucketCount;
+        @JsonProperty("range")
+        private int[] range = new int[2];
+        @JsonProperty("histogram_type")
+        private int histogramType;
         
         public List<int[]> getValues() {
             return values;
@@ -142,6 +146,27 @@ public class TelemetryDataAggregate {
 
         public void setBucketCount(int bucketCount) {
             this.bucketCount = bucketCount;
+        }
+
+        public int[] getRange() {
+            return range;
+        }
+
+        public void setMinMaxRange(int minRange, int maxRange) {
+            range[0] = minRange;
+            range[1] = maxRange;
+        }
+        
+        public void setRange(int[] range) {
+            this.range = range;
+        }
+
+        public int getHistogramType() {
+            return histogramType;
+        }
+
+        public void setHistogramType(int histogramType) {
+            this.histogramType = histogramType;
         }
     }
     
@@ -212,6 +237,7 @@ public class TelemetryDataAggregate {
         }
         
         hist.setSum(sum);
+        histograms.put(key, hist);
     }
     
     public void setHistogramBucketCount(String key, int bucketCount) {
@@ -223,6 +249,31 @@ public class TelemetryDataAggregate {
         }
         
         hist.setBucketCount(bucketCount);
+        histograms.put(key, hist);
+    }
+    
+    public void setHistogramRange(String key, int minRange, int maxRange) {
+        Histogram hist = null;
+        if (histograms.containsKey(key)) {
+            hist = histograms.get(key);
+        } else {
+            hist = new Histogram();
+        }
+        
+        hist.setMinMaxRange(minRange, maxRange);
+        histograms.put(key, hist);
+    }
+    
+    public void setHistogramType(String key, int histogramType) {
+        Histogram hist = null;
+        if (histograms.containsKey(key)) {
+            hist = histograms.get(key);
+        } else {
+            hist = new Histogram();
+        }
+        
+        hist.setHistogramType(histogramType);
+        histograms.put(key, hist);
     }
 
     public List<String> getHistogramNames() {

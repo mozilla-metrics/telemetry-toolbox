@@ -20,86 +20,30 @@ hist_values = FOREACH filtered_genmap GENERATE SUBSTRING(k,1,9) AS d:chararray,
                                                (chararray)json_map#'info'#'version' AS os_version:chararray,
                                                (chararray)json_map#'info'#'appBuildID' AS app_build_id:chararray,
                                                (chararray)json_map#'info'#'platformBuildID' AS plat_build_id:chararray,
-                                               FLATTEN(com.mozilla.telemetry.pig.eval.HistogramValueTuples(json_map#'histograms')) AS (hist_name:chararray, v:chararray, count:double, sum:long, bucket_count:int);
+                                               FLATTEN(com.mozilla.telemetry.pig.eval.HistogramValueTuples(json_map#'histograms')) AS (hist_name:chararray, v:chararray, count:double, sum:long, bucket_count:int, min_range:int, max_range:int, hist_type:int);
 
-hist_by_name_and_v = GROUP hist_values BY (d,product,product_version,arch,os,os_version,app_build_id,plat_build_id,hist_name,v);
-hist_sums = FOREACH hist_by_name_and_v GENERATE FLATTEN(group) AS (d,product,product_version,arch,os,os_version,app_build_id,plat_build_id,hist_name,v), SUM(hist_values.count) AS sum_count, COUNT(hist_values) AS doc_count, SUM(hist_values.sum) AS sum_sum, MAX(hist_values.bucket_count) AS max_bucket_count;
+hist_by_name_and_v = GROUP hist_values BY (d,product,product_version,arch,os,os_version,app_build_id,plat_build_id,hist_name,v,bucket_count,min_range,max_range,hist_type);
+hist_sums = FOREACH hist_by_name_and_v GENERATE FLATTEN(group) AS (d,product,product_version,arch,os,os_version,app_build_id,plat_build_id,hist_name,v,bucket_count,min_range,max_range,hist_type), 
+                                                SUM(hist_values.count) AS sum_count, 
+                                                COUNT(hist_values) AS doc_count, 
+                                                SUM(hist_values.sum) AS sum_sum;
                                                
 simple_measures = FOREACH filtered_genmap GENERATE SUBSTRING(k,1,9) AS d:chararray, 
-                                               (chararray)json_map#'info'#'appName' AS product:chararray,
-                                               (chararray)json_map#'info'#'appVersion' AS product_version:chararray, 
-                                               (chararray)json_map#'info'#'arch' AS arch:chararray,
-                                               (chararray)json_map#'info'#'OS' AS os:chararray, 
-                                               (chararray)json_map#'info'#'version' AS os_version:chararray,
-                                               (chararray)json_map#'info'#'appBuildID' AS app_build_id:chararray,
-                                               (chararray)json_map#'info'#'platformBuildID' AS plat_build_id:chararray,
-                                               FLATTEN(com.mozilla.telemetry.pig.eval.SimpleMeasureTuples(json_map#'simpleMeasurements')) AS (hist_name:chararray, v:chararray, count:double, sum:long, bucket_count:int);
+                                                   (chararray)json_map#'info'#'appName' AS product:chararray,
+                                                   (chararray)json_map#'info'#'appVersion' AS product_version:chararray, 
+                                                   (chararray)json_map#'info'#'arch' AS arch:chararray,
+                                                   (chararray)json_map#'info'#'OS' AS os:chararray, 
+                                                   (chararray)json_map#'info'#'version' AS os_version:chararray,
+                                                   (chararray)json_map#'info'#'appBuildID' AS app_build_id:chararray,
+                                                   (chararray)json_map#'info'#'platformBuildID' AS plat_build_id:chararray,
+                                                   FLATTEN(com.mozilla.telemetry.pig.eval.SimpleMeasureTuples(json_map#'simpleMeasurements')) AS (hist_name:chararray, v:chararray, count:double, sum:long, bucket_count:int, min_range:int, max_range:int, hist_type:int);
 
-sm_by_name_and_v = GROUP simple_measures BY (d,product,product_version,arch,os,os_version,app_build_id,plat_build_id,hist_name,v);
-sm_sums = FOREACH sm_by_name_and_v GENERATE FLATTEN(group) AS (d,product,product_version,arch,os,os_version,app_build_id,plat_build_id,hist_name,v), SUM(simple_measures.count) AS sum_count, COUNT(simple_measures) AS doc_count, SUM(simple_measures.sum) AS sum_sum, MAX(simple_measures.bucket_count) AS max_bucket_count;
+sm_by_name_and_v = GROUP simple_measures BY (d,product,product_version,arch,os,os_version,app_build_id,plat_build_id,hist_name,v,bucket_count,min_range,max_range,hist_type);
+sm_sums = FOREACH sm_by_name_and_v GENERATE FLATTEN(group) AS (d,product,product_version,arch,os,os_version,app_build_id,plat_build_id,hist_name,v,bucket_count,min_range,max_range,hist_type), 
+                                            SUM(simple_measures.count) AS sum_count, 
+                                            COUNT(simple_measures) AS doc_count, 
+                                            SUM(simple_measures.sum) AS sum_sum;
 
 unified = UNION hist_sums,sm_sums;
 ordered = ORDER unified BY d,product,product_version,arch,os,os_version,app_build_id,plat_build_id;
 STORE ordered INTO 'telemetry-aggregates-$start_date-$end_date' USING PigStorage();
-
-/* Localhost example for my own testing (not exactly the same as above)*/
-/*
-register '/Users/xstevens/workspace/akela/target/akela-0.2-SNAPSHOT.jar'
-raw = LOAD 'file:///Users/xstevens/Desktop/telemetry-nonpretty.js' AS (k:chararray, json:chararray);
-genmap = FOREACH raw GENERATE com.mozilla.pig.eval.json.JsonMap(json) AS json_map:map[];
-hist_values = FOREACH genmap GENERATE (chararray)json_map#'info'#'appName' AS product:chararray,
-                                      (chararray)json_map#'info'#'appVersion' AS product_version:chararray, 
-                                      (chararray)json_map#'info'#'arch' AS arch:chararray,
-                                      (chararray)json_map#'info'#'OS' AS os:chararray, 
-                                      (chararray)json_map#'info'#'version' AS os_version:chararray,
-                                      (chararray)json_map#'info'#'appBuildID' AS app_build_id:chararray,
-                                      (chararray)json_map#'info'#'platformBuildID' AS plat_build_id:chararray,
-                                      FLATTEN(com.mozilla.telemetry.pig.eval.HistogramValueTuples(json_map#'histograms')) AS (hist_name:chararray, v:chararray, count:double);
-by_name_and_v = GROUP hist_values BY (product,product_version,arch,os,os_version,app_build_id,plat_build_id,hist_name,v);                                                           
-sums = FOREACH by_name_and_v GENERATE FLATTEN(group) AS (product,product_version,arch,os,os_version,app_build_id,plat_build_id,hist_name,v), SUM(hist_values.count) AS sum_count;
-
-simple_measures = FOREACH genmap GENERATE (chararray)json_map#'info'#'appName' AS product:chararray,
-                                               (chararray)json_map#'info'#'appVersion' AS product_version:chararray, 
-                                               (chararray)json_map#'info'#'arch' AS arch:chararray,
-                                               (chararray)json_map#'info'#'OS' AS os:chararray, 
-                                               (chararray)json_map#'info'#'version' AS os_version:chararray,
-                                               (chararray)json_map#'info'#'appBuildID' AS app_build_id:chararray,
-                                               (chararray)json_map#'info'#'platformBuildID' AS plat_build_id:chararray,
-                                               (long)json_map#'simpleMeasurements'#'uptime' AS uptime:long,
-                                               (long)json_map#'simpleMeasurements'#'main' AS main:long,
-                                               (long)json_map#'simpleMeasurements'#'firstPaint' AS first_paint:long,
-                                               (long)json_map#'simpleMeasurements'#'sessionRestored' AS session_restored:long;
-grouped_measures = GROUP simple_measures BY (product,product_version,arch,os,os_version,app_build_id,plat_build_id);
-avgs = FOREACH grouped_measures GENERATE FLATTEN(group) AS (product,product_version,arch,os,os_version,app_build_id,plat_build_id), AVG(simple_measures.uptime) AS avg_uptime, AVG(simple_measures.main) AS avg_main, AVG(simple_measures.first_paint) AS avg_first_paint, AVG(simple_measures.session_restored) AS avg_session_restored;
-results = JOIN avgs BY (product,product_version,arch,os,os_version,app_build_id,plat_build_id) FULL OUTER, sums BY (product,product_version,arch,os,os_version,app_build_id,plat_build_id);
-final_results = FOREACH results GENERATE avgs::product,avgs::product_version,avgs::arch,avgs::os,avgs::os_version,avgs::app_build_id,avgs::plat_build_id,avgs::avg_uptime,avgs::avg_main,avgs::avg_first_paint,avgs::avg_session_restored,sums::hist_name,sums::v,sums::sum_count;
-*/
-
-/* 54515 combos for 10/27 */
-/*
-combos = FOREACH filtered_genmap GENERATE json_map#'info'#'appName' AS product:chararray, 
-                                 json_map#'info'#'appVersion' AS product_version:chararray, 
-                                 json_map#'info'#'arch' AS arch:chararray,
-                                 json_map#'info'#'OS' AS os:chararray, 
-                                 json_map#'info'#'version' AS os_version:chararray,
-                                 json_map#'info'#'appBuildID' AS app_build_id:chararray,
-                                 json_map#'info'#'platformBuildID' AS plat_build_id:chararray,
-                                 json_map#'info'#'memsize' AS mem_size:int,
-                                 json_map#'info'#'cpucount' AS cpu_count:int,
-                                 json_map#'info'#'reason' AS submission_reason:chararray;
-dcombos = DISTINCT combos;
-STORE dcombos INTO 'telemetry-filter-combos' USING PigStorage();
-*/
-
-/* 4244 combos for 10/27 */
-/*
-combos = FOREACH filtered_genmap GENERATE json_map#'info'#'appName' AS product:chararray, 
-                                          json_map#'info'#'appVersion' AS product_version:chararray, 
-                                          json_map#'info'#'arch' AS arch:chararray,
-                                          json_map#'info'#'OS' AS os:chararray, 
-                                          json_map#'info'#'version' AS os_version:chararray,
-                                          json_map#'info'#'appBuildID' AS app_build_id:chararray,
-                                          json_map#'info'#'platformBuildID' AS plat_build_id:chararray;
-dcombos = DISTINCT combos;
-STORE dcombos INTO 'telemetry-filter-combos' USING PigStorage();
-*/
