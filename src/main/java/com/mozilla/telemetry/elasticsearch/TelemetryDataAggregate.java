@@ -21,8 +21,10 @@ package com.mozilla.telemetry.elasticsearch;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.codehaus.jackson.annotate.JsonAutoDetect;
 import org.codehaus.jackson.annotate.JsonAutoDetect.Visibility;
@@ -175,7 +177,7 @@ public class TelemetryDataAggregate {
     @JsonProperty("info")
     private Info info;
     @JsonProperty("histogram_names")
-    private List<String> histogramNames = new ArrayList<String>();
+    private Set<String> histogramNames = new HashSet<String>();
     @JsonProperty("histograms")
     private Map<String,Histogram> histograms = new HashMap<String,Histogram>();
     
@@ -276,11 +278,11 @@ public class TelemetryDataAggregate {
         histograms.put(key, hist);
     }
 
-    public List<String> getHistogramNames() {
+    public Set<String> getHistogramNames() {
         return histogramNames;
     }
 
-    public void setHistogramNames(List<String> histogramNames) {
+    public void setHistogramNames(Set<String> histogramNames) {
         this.histogramNames = histogramNames;
     }
     

@@ -24,6 +24,12 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.text.ParseException;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
@@ -41,6 +47,8 @@ import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.node.Node;
 import org.elasticsearch.node.NodeBuilder;
+
+import com.mozilla.telemetry.elasticsearch.TelemetryDataAggregate.Histogram;
 
 public class AggregateElasticSearchIndexer {
 
@@ -123,6 +131,92 @@ public class AggregateElasticSearchIndexer {
         }
     }
     
+    /**
+     * Corrects buckets if there are more actual buckets than configured buckets for
+     * a given histogram
+     * @param tdata
+     */
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    private boolean checkAndCorrectBuckets(TelemetryDataAggregate tdata) {
+        LOG.info(String.format("Checking buckets for %s %s (%s,%s) on %s %s", tdata.getInfo().getAppName(), tdata.getInfo().getAppVersion(), tdata.getInfo().getAppBuildId(), tdata.getInfo().getPlatformBuildId(), tdata.getInfo().getOS(), tdata.getInfo().getVersion()));
+        
+        boolean wasCorrected = false;
+        for (Map.Entry<String,Histogram> entry : tdata.getHistograms().entrySet()) {
+            String histName = entry.getKey();
+            Histogram hist = entry.getValue();
+            List<int[]> values = hist.getValues();
+            if (hist.getBucketCount() < values.size() && !histName.startsWith("SIMPLE_MEASURES")) {
+                
+                LOG.info(String.format("%s histogram was configured for %d buckets but actually has %d.", entry.getKey(), hist.getBucketCount(), values.size()));
+                
+                // Sort by counts
+                Collections.sort(values, Collections.reverseOrder(new Comparator() {
+                    @Override
+                    public int compare(Object o1, Object o2) {
+                        int[] a1 = (int[])o1;
+                        int[] a2 = (int[])o2;
+                        
+                        if (a1.length == 2 && a2.length == 2) {
+                            return a1[1] < a2[1] ? -1 : a1[1] > a2[1] ? 1 : 0;
+                        }
+                        
+                        return 0;
+                    }         
+                }));
+                
+                // All values beyond the hist bucket count at this point need to be combined into neighboring buckets
+                List<int[]> mergeValues = values.subList(hist.getBucketCount(), values.size());
+                Set<Integer> mergeBuckets = new HashSet<Integer>();
+                for (int i=0; i < mergeValues.size(); i++) {
+                    int[] vs = mergeValues.get(i);
+                    mergeBuckets.add(vs[0]);
+                }
+                
+                // Sort by buckets
+                Collections.sort(values, new Comparator() {
+                    @Override
+                    public int compare(Object o1, Object o2) {
+                        int[] a1 = (int[])o1;
+                        int[] a2 = (int[])o2;
+                        
+                        if (a1.length == 2 && a2.length == 2) {
+                            return a1[0] < a2[0] ? -1 : a1[0] > a2[0] ? 1 : 0;
+                        }
+                        
+                        return 0;
+                    }         
+                });
+                
+                // Merge process
+                for (int i=0; i <= hist.getBucketCount() && i < values.size(); i++) {
+                    int[] cur = values.get(i);
+                    // If this bucket is in the merge set then merge it into it's neighbor above
+                    // or below in the case it is the last bucket
+                    if (mergeBuckets.contains(cur[0])) {
+                        if ((i+1) < values.size()) {
+                            int[] above = values.get(i+1);
+                            LOG.info(String.format("Merging bucket %d=%d into %d=%d",cur[0],cur[1],above[0],above[1]));
+                            above[1] += cur[1];
+                            values.set(i+1, above);
+                        } else {
+                            int[] below = values.get(i-1);
+                            LOG.info(String.format("Merging bucket %d=%d into %d=%d",cur[0],cur[1],below[0],below[1]));
+                            below[1] += cur[1];
+                            values.set(i-1, below);
+                        }
+                        
+                        // Remove this bucket from the list
+                        values.remove(i);
+                    }
+                }
+
+                wasCorrected = true;
+            }
+        }
+        
+        return wasCorrected;
+    }
+    
     public void indexHDFSData(String inputPath) throws IOException {
         ObjectMapper jsonMapper = new ObjectMapper();
         Pattern tab = Pattern.compile("\t");
@@ -155,6 +249,10 @@ public class AggregateElasticSearchIndexer {
                     if (startNewObject) {
                         // Write out previous object if there is one
                         if (tdata != null) {
+                            // Check the buckets and correct them by merging
+//                            if (checkAndCorrectBuckets(tdata)) {
+//                                System.out.println(jsonMapper.writeValueAsString(tdata));
+//                            }
                             ByteArrayOutputStream baos = new ByteArrayOutputStream();
                             jsonMapper.writeValue(baos, tdata);
 
