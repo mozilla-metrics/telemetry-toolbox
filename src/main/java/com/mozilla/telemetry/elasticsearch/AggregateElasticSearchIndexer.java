@@ -291,18 +291,30 @@ public class AggregateElasticSearchIndexer {
                         tdata.setInfo(info);
                     }
                     
-                    // Add histogram entry
-                    tdata.addOrPutHistogramValue(splits[8], splits[9], (int)Float.parseFloat(splits[14]));
-                    // increment histogram count
-                    tdata.incrementHistogramCount(splits[8], Integer.parseInt(splits[15]));
-                    // set the histogram sum
-                    tdata.setHistogramSum(splits[8], (long)Double.parseDouble(splits[16]));
-                    // set the histogram bucket count
-                    tdata.setHistogramBucketCount(splits[8], Integer.parseInt(splits[10]));
-                    // set the hisotgram range
-                    tdata.setHistogramRange(splits[8], Integer.parseInt(splits[11]), Integer.parseInt(splits[12]));
-                    // set the histogram type
-                    tdata.setHistogramType(splits[8], Integer.parseInt(splits[13]));
+                    try {
+                        // Make value int safe
+                        String safeValue = splits[9].replaceAll("[a-zA-Z]", "");
+                        
+                        // Add histogram entry
+                        tdata.addOrPutHistogramValue(splits[8], safeValue, (int)Float.parseFloat(splits[14]));
+                        // increment histogram count
+                        tdata.incrementHistogramCount(splits[8], Integer.parseInt(splits[15]));
+                        // set the histogram sum
+                        tdata.setHistogramSum(splits[8], (long)Double.parseDouble(splits[16]));
+                        // set the histogram bucket count
+                        tdata.setHistogramBucketCount(splits[8], Integer.parseInt(splits[10]));
+                        // set the hisotgram range
+                        tdata.setHistogramRange(splits[8], Integer.parseInt(splits[11]), Integer.parseInt(splits[12]));
+                        // set the histogram type
+                        tdata.setHistogramType(splits[8], Integer.parseInt(splits[13]));
+                    } catch (NumberFormatException e) {
+                        LOG.warn("Encountered a bad number", e);
+                        LOG.warn("Splits: ");
+                        for (String s : splits) {
+                            LOG.warn("\t" + s);
+                        }
+                        throw e;
+                    }
                     
                     prevSplits = splits;
                 }
