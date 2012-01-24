@@ -51,7 +51,10 @@ public class HistogramValueTuples extends EvalFunc<DataBag> {
                     if (values != null) {
                         long sum = 0;
                         if (hv.containsKey("sum")) {
-                            sum = ((Number)hv.get("sum")).longValue();
+                            Object o = hv.get("sum");
+                            if (o != null) {
+                                sum = ((Number)o).longValue();
+                            }
                         }
                         int bucketCount = 0;
                         if (hv.containsKey("bucket_count")) {

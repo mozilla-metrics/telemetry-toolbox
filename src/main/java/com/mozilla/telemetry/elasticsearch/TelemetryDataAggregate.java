@@ -213,9 +213,11 @@ public class TelemetryDataAggregate {
             hist = new Histogram();
         }
 
-        hist.addValue(new int[] { Integer.parseInt(histValueKey), histValue });
-        histograms.put(key, hist);
-        histogramNames.add(key);
+        if (!"".equals(histValueKey.trim())) {
+            hist.addValue(new int[] { Integer.parseInt(histValueKey), histValue });
+            histograms.put(key, hist);
+            histogramNames.add(key);
+        }
     }
     
     public void incrementHistogramCount(String key, int count) {

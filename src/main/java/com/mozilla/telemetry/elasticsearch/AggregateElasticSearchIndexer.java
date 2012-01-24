@@ -313,7 +313,6 @@ public class AggregateElasticSearchIndexer {
                         for (String s : splits) {
                             LOG.warn("\t" + s);
                         }
-                        throw e;
                     }
                     
                     prevSplits = splits;
