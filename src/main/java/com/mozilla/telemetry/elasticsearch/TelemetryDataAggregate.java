@@ -39,6 +39,8 @@ public class TelemetryDataAggregate {
         private String appName;
         @JsonProperty("appVersion")
         private String appVersion;
+        @JsonProperty("appUpdateChannel")
+        private String appUpdateChannel;
         @JsonProperty("OS")
         private String OS;
         @JsonProperty("appBuildID")
@@ -61,6 +63,12 @@ public class TelemetryDataAggregate {
         }
         public void setAppVersion(String appVersion) {
             this.appVersion = appVersion;
+        }
+        public String getAppUpdateChannel() {
+            return appUpdateChannel;
+        }
+        public void setAppUpdateChannel(String appUpdateChannel) {
+            this.appUpdateChannel = appUpdateChannel;
         }
         public String getOS() {
             return OS;

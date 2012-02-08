@@ -283,31 +283,32 @@ public class AggregateElasticSearchIndexer {
                         TelemetryDataAggregate.Info info = new TelemetryDataAggregate.Info();
                         info.setAppName(splits[1]);
                         info.setAppVersion(splits[2]);
-                        info.setArch(splits[3]);
-                        info.setOS(splits[4]);
-                        info.setVersion(splits[5]);
-                        info.setAppBuildId(splits[6]);
-                        info.setPlatformBuildId(splits[7]);
+                        info.setAppUpdateChannel(splits[3]);
+                        info.setArch(splits[4]);
+                        info.setOS(splits[5]);
+                        info.setVersion(splits[6]);
+                        info.setAppBuildId(splits[7]);
+                        info.setPlatformBuildId(splits[8]);
                         tdata.setInfo(info);
                     }
                     
                     try {
-                        if (splits.length == 17) {
+                        if (splits.length == 18) {
                             // Make value int safe
-                            String safeValue = splits[9].replaceAll("[a-zA-Z]", "");
-                            
+                            String safeValue = splits[10].replaceAll("[a-zA-Z]", "");
+                            String histName = splits[9];
                             // Add histogram entry
-                            tdata.addOrPutHistogramValue(splits[8], safeValue, (int)Float.parseFloat(splits[14]));
+                            tdata.addOrPutHistogramValue(histName, safeValue, (int)Float.parseFloat(splits[15]));
                             // increment histogram count
-                            tdata.incrementHistogramCount(splits[8], Integer.parseInt(splits[15]));
+                            tdata.incrementHistogramCount(histName, Integer.parseInt(splits[16]));
                             // set the histogram sum
-                            tdata.setHistogramSum(splits[8], (long)Double.parseDouble(splits[16]));
+                            tdata.setHistogramSum(histName, (long)Double.parseDouble(splits[17]));
                             // set the histogram bucket count
-                            tdata.setHistogramBucketCount(splits[8], Integer.parseInt(splits[10]));
+                            tdata.setHistogramBucketCount(histName, Integer.parseInt(splits[11]));
                             // set the hisotgram range
-                            tdata.setHistogramRange(splits[8], Integer.parseInt(splits[11]), Integer.parseInt(splits[12]));
+                            tdata.setHistogramRange(histName, Integer.parseInt(splits[12]), Integer.parseInt(splits[13]));
                             // set the histogram type
-                            tdata.setHistogramType(splits[8], Integer.parseInt(splits[13]));
+                            tdata.setHistogramType(histName, Integer.parseInt(splits[14]));
                         } else {
                             LOG.error("Encountered invalid split length for line: " + line);
                         }
