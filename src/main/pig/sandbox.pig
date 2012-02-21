@@ -6,6 +6,18 @@ SET default_parallel 8;
 SET pig.tmpfilecompression true;
 SET pig.tmpfilecompression.codec lzo;
 
+raw = LOAD 'hbase://telemetry' USING com.mozilla.pig.load.HBaseMultiScanLoader('20120125', '20120127', 'yyyyMMdd', 'data:json') AS (k:chararray, json:chararray);
+genmap = FOREACH raw GENERATE k,json,com.mozilla.pig.eval.json.JsonMap(json) AS json_map:map[];
+reasons = FOREACH genmap GENERATE json_map#'info'#'reason' AS reason:chararray;
+grouped = GROUP reasons BY reason;
+reason_counts = FOREACH grouped GENERATE FLATTEN(group) AS reason:chararray, COUNT(reasons);
+store reason_counts into 'telemetry-reasoncounts';
+
+filtered_genmap = FILTER genmap BY json_map#'info'#'reason' == 'saved-session';
+k_jsons = FOREACH filtered_genmap GENERATE k,json;
+store k_jsons into 'telemetry-savedsessions';
+
+
 oct = LOAD 'telemetry-gc-uptime-ratio-oct-11-31' AS (k:chararray,version:chararray,hist_name:chararray,v:chararray,count:double,sum:long,k2,uptime:int);
 nov1 = LOAD 'telemetry-gc-uptime-ratio-nov-1-15' AS (k:chararray,version:chararray,hist_name:chararray,v:chararray,count:double,sum:long,k2,uptime:int);
 nov2 = LOAD 'telemetry-gc-uptime-ratio-nov-16-30' AS (k:chararray,version:chararray,hist_name:chararray,v:chararray,count:double,sum:long,k2,uptime:int);

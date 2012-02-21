@@ -17,11 +17,17 @@ by_id <- ddply(raw_data, .(id,date,os), function(x) {
 
 by_date <- ddply(by_id, .(date,os), function(x) {
   avg_time <- mean(x$avg_time)
-  sum_count <- sum(x$sum_count) / 1000
-  data.frame(avg_time=avg_time, sum_count=sum_count)
+  median_time <- median(x$avg_time)
+  sum_count <- sum(x$sum_count)
+  data.frame(avg_time=avg_time, median_time=median_time, sum_count=sum_count)
 })
 
 qplot(date, avg_time, data=by_id, geom=c("point","smooth"), colour=factor(os), alpha=I(0.35), main="Date vs. CYCLE_COLLECTOR Avg. Time", ylab="avg. time (ms)") + scale_x_date()
 qplot(date, avg_time, data=by_date, geom=c("line","smooth"), colour=factor(os), main="Date vs. CYCLE_COLLECTOR Avg. of Avg. Time", ylab="avg. of avg. time (ms)") + scale_x_date()
 qplot(date, sum_count, data=by_date, geom=c("line"), colour=factor(os), main="Date vs. CYCLE_COLLECTOR sum(count)", ylab="count (in thousands)") + scale_x_date()
 qplot(sum_count, avg_time, data=by_id, geom=c("point","smooth"), colour=factor(os), alpha=I(0.35), main="CYCLE_COLLECTOR sum(count) vs. avg. time", xlab="sum(count)", ylab="avg. time (ms)") + scale_x_log10() + scale_y_log10()
+qplot(date, avg_time, data=by_id, geom=c("point"), size=sum_count, colour=factor(os)) + scale_x_date()
+qplot(date, median_time, data=by_id, geom=c("point"), stat="sum", colour=factor(os)) + scale_x_date()
+
+qplot(median_time, data=by_date, geom="histogram")
+qplot(date, median_time, data=by_date, geom=c("line","smooth"), colour=factor(os), main="Date vs. CYCLE_COLLECTOR Median of Avg. Time", ylab="median of avg. time (ms)") + scale_x_date()
