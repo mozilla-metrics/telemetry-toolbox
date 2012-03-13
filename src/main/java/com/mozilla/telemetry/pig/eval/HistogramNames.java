@@ -1,5 +1,5 @@
 /**
- * Copyright 2011 Mozilla Foundation
+ * Copyright 2012 Mozilla Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -28,10 +28,12 @@ import org.apache.pig.data.DataBag;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 
-public class HistogramSumTuples extends EvalFunc<DataBag> {
-
+public class HistogramNames  extends EvalFunc<DataBag> {
+    
     private static BagFactory bagFactory = BagFactory.getInstance();
     private static TupleFactory tupleFactory = TupleFactory.getInstance();
+    
+    private static final String SIMPLE_MEASURES_PREFIX = "SIMPLE_MEASURES_";
     
     @SuppressWarnings("unchecked")
     @Override
@@ -43,17 +45,20 @@ public class HistogramSumTuples extends EvalFunc<DataBag> {
         DataBag output = bagFactory.newDefaultBag();
         Map<String,Map<String,Object>> m = (Map<String,Map<String,Object>>)input.get(0);
         if (m != null) {
-            for (Map.Entry<String, Map<String,Object>> hist : m.entrySet()) {
-                Map<String,Object> hv = hist.getValue();
-                if (hv != null && hv.containsKey("sum")) {
-                    Tuple t = tupleFactory.newTuple(2);
-                    t.set(0, hist.getKey());
-                    t.set(1, ((Number)hv.get("sum")).longValue());
-                }
+            for (String histName : m.keySet()) {
+                output.add(tupleFactory.newTuple(histName));
+            }
+        }
+        
+        Map<String,Object> smMap = (Map<String,Object>)input.get(1);
+        if (smMap != null) {
+            for (String measureName : smMap.keySet()) {
+                String measureKey = SIMPLE_MEASURES_PREFIX + measureName.toUpperCase();
+                output.add(tupleFactory.newTuple(measureKey));
             }
         }
         
         return output;
     }
-
+    
 }

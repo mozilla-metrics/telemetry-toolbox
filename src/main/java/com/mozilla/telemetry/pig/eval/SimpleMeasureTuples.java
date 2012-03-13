@@ -86,17 +86,20 @@ public class SimpleMeasureTuples extends EvalFunc<DataBag> {
                 Object vo = measure.getValue();
                 if (vo != null && vo instanceof Map) {
                     for (Map.Entry<String, Object> js : ((Map<String,Object>)vo).entrySet()) {
-                        long booleanNum = ((Number)js.getValue()).longValue();
-                        Tuple t = tupleFactory.newTuple(8);
-                        t.set(0, measureKey + "_" + js.getKey().toUpperCase());
-                        t.set(1, booleanNum);
-                        t.set(2, 1.0d);
-                        t.set(3, booleanNum);
-                        t.set(4, 2);
-                        t.set(5, 0);
-                        t.set(6, 1);
-                        t.set(7, 2);
-                        output.add(t);
+                        Object jso = js.getValue();
+                        if (jso != null) {
+                            long booleanNum = ((Number)jso).longValue();
+                            Tuple t = tupleFactory.newTuple(8);
+                            t.set(0, measureKey + "_" + js.getKey().toUpperCase());
+                            t.set(1, booleanNum);
+                            t.set(2, 1.0d);
+                            t.set(3, booleanNum);
+                            t.set(4, 2);
+                            t.set(5, 0);
+                            t.set(6, 1);
+                            t.set(7, 2);
+                            output.add(t);
+                        }
                     }
                 } else if (vo != null) {
                     long timeValue = ((Number)vo).longValue();

@@ -86,29 +86,23 @@
 			<version>1.0</version>
 		</dependency>
 
-		<dependency>
-			<groupId>com.google.guava</groupId>
-			<artifactId>guava</artifactId>
-			<version>r06</version>
-		</dependency>
-
 		<!-- Jackson JSON Processor -->
 		<dependency>
 			<groupId>org.codehaus.jackson</groupId>
 			<artifactId>jackson-core-asl</artifactId>
-			<version>1.9.0</version>
+			<version>1.9.5</version>
 		</dependency>
 		<dependency>
 			<groupId>org.codehaus.jackson</groupId>
 			<artifactId>jackson-mapper-asl</artifactId>
-			<version>1.9.0</version>
+			<version>1.9.5</version>
 		</dependency>
 
 		<!-- Cloudera Hadoop, HBase -->
 		<dependency>
 			<groupId>org.apache.hadoop</groupId>
 			<artifactId>hadoop-core</artifactId>
-			<version>0.20.2-cdh3u0</version>
+			<version>0.20.2-cdh3u2</version>
 			<scope>provided</scope>
 			<exclusions>
 				<exclusion>
@@ -196,7 +190,7 @@
 		<dependency>
 			<groupId>org.apache.hbase</groupId>
 			<artifactId>hbase</artifactId>
-			<version>0.90.1-cdh3u0</version>
+			<version>0.90.4-cdh3u2</version>
 			<scope>provided</scope>
 			<exclusions>
 				<exclusion>
@@ -314,7 +308,7 @@
 		<dependency>
 			<groupId>org.apache.pig</groupId>
 			<artifactId>pig</artifactId>
-			<version>0.8.0-cdh3u0</version>
+			<version>0.8.1-cdh3u2</version>
 			<scope>provided</scope>
 			<exclusions>
 				<exclusion>
@@ -343,19 +337,65 @@
 				</exclusion>
 			</exclusions>
 		</dependency>
-
+		<dependency>
+			<groupId>org.apache.pig</groupId>
+			<artifactId>pigunit</artifactId>
+			<version>0.8.1-cdh3u2</version>
+			<scope>test</scope>
+		</dependency>
+		
 		<!-- ElasticSearch -->
 		<dependency>
 			<groupId>org.elasticsearch</groupId>
 			<artifactId>elasticsearch</artifactId>
 			<version>0.17.9</version>
+			<exclusions>
+				<exclusion>
+					<artifactId>jakarta-regexp</artifactId>
+					<groupId>jakarta-regexp</groupId>
+				</exclusion>
+				<exclusion>
+					<artifactId>lucene-queries</artifactId>
+					<groupId>org.apache.lucene</groupId>
+				</exclusion>
+				<exclusion>
+					<artifactId>lucene-analyzers</artifactId>
+					<groupId>org.apache.lucene</groupId>
+				</exclusion>
+				<exclusion>
+					<artifactId>lucene-highlighter</artifactId>
+					<groupId>org.apache.lucene</groupId>
+				</exclusion>
+				<exclusion>
+					<artifactId>lucene-memory</artifactId>
+					<groupId>org.apache.lucene</groupId>
+				</exclusion>
+				<exclusion>
+					<artifactId>lucene-core</artifactId>
+					<groupId>org.apache.lucene</groupId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 
 		<!-- Mozilla Akela -->
 		<dependency>
 			<groupId>com.mozilla</groupId>
 			<artifactId>akela</artifactId>
-			<version>0.2-SNAPSHOT</version>
+			<version>0.3-SNAPSHOT</version>
+			<exclusions>
+				<exclusion>
+					<artifactId>riak-client</artifactId>
+					<groupId>com.basho.riak</groupId>
+				</exclusion>
+				<exclusion>
+					<artifactId>httpcore</artifactId>
+					<groupId>org.apache.httpcomponents</groupId>
+				</exclusion>
+				<exclusion>
+					<artifactId>httpclient</artifactId>
+					<groupId>org.apache.httpcomponents</groupId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 
 	</dependencies>
@@ -382,11 +422,11 @@
 					<finalName>${project.name}-${project.version}</finalName>
 				</configuration>
 			</plugin>
-
+			
 			<plugin>
 				<artifactId>maven-assembly-plugin</artifactId>
 				<configuration>
-					<appendAssemblyId>false</appendAssemblyId>
+					<appendAssemblyId>true</appendAssemblyId>
 					<finalName>${project.name}-${project.version}</finalName>
 					<descriptors>
 						<descriptor>src/assembly/dist.xml</descriptor>

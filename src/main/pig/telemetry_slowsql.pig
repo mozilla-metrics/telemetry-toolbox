@@ -18,10 +18,9 @@ mainthreads = FOREACH filtered_main GENERATE SUBSTRING(k,1,9) AS d:chararray,
                                              (chararray)json_map#'info'#'appName' AS product:chararray,
                                              (chararray)json_map#'info'#'appVersion' AS product_version:chararray,
                                              (chararray)json_map#'info'#'appUpdateChannel' AS product_channel:chararray,
-                                             (chararray)json_map#'info'#'appBuildID' AS app_build_id:chararray,
                                              FLATTEN(SlowSqlTuples(json_map#'slowSQL'#'mainThread')) AS (sql:chararray, count:long, t:long);
-plus_avg_time_main = FOREACH mainthreads GENERATE d,product,product_version,product_channel,app_build_id,sql,count,t,((double)t / (double)count) AS avg_time:double;
-grouped_main = GROUP plus_avg_time_main BY (d,product,product_version,product_channel,app_build_id,sql);
+plus_avg_time_main = FOREACH mainthreads GENERATE d,product,product_version,product_channel,sql,count,t,((double)t / (double)count) AS avg_time:double;
+grouped_main = GROUP plus_avg_time_main BY (d,product,product_version,product_channel,sql);
 /* StreamingQuantile computation isn't guaranteed to be accurate with only small number of documents but is more computationaly efficient for large document sets
 slowsql_main = FOREACH grouped_main GENERATE FLATTEN(group) AS (d,product,product_version,product_channel,app_build_id,sql),
                                              COUNT(plus_avg_time_main) AS doc_count,
@@ -30,7 +29,7 @@ slowsql_main = FOREACH grouped_main GENERATE FLATTEN(group) AS (d,product,produc
 */
 slowsql_main = FOREACH grouped_main {
     sorted_main = ORDER plus_avg_time_main BY avg_time;
-    GENERATE FLATTEN(group) AS (d,product,product_version,product_channel,app_build_id,sql),
+    GENERATE FLATTEN(group) AS (d,product,product_version,product_channel,sql),
              COUNT(plus_avg_time_main) AS doc_count,
              SUM(sorted_main.count) AS sum_count,
              Quantile(sorted_main.avg_time);
@@ -42,13 +41,12 @@ otherthreads = FOREACH filtered_other GENERATE SUBSTRING(k,1,9) AS d:chararray,
                                                (chararray)json_map#'info'#'appName' AS product:chararray,
                                                (chararray)json_map#'info'#'appVersion' AS product_version:chararray,
                                                (chararray)json_map#'info'#'appUpdateChannel' AS product_channel:chararray,
-                                               (chararray)json_map#'info'#'appBuildID' AS app_build_id:chararray,
                                                FLATTEN(SlowSqlTuples(json_map#'slowSQL'#'otherThreads')) AS (sql:chararray, count:long, t:long);
-plus_avg_time_other = FOREACH otherthreads GENERATE d,product,product_version,product_channel,app_build_id,sql,count,t,((double)t / (double)count) AS avg_time:double;
-grouped_other = GROUP plus_avg_time_other BY (d,product,product_version,product_channel,app_build_id,sql);
+plus_avg_time_other = FOREACH otherthreads GENERATE d,product,product_version,product_channel,sql,count,t,((double)t / (double)count) AS avg_time:double;
+grouped_other = GROUP plus_avg_time_other BY (d,product,product_version,product_channel,sql);
 slowsql_other = FOREACH grouped_other {
     sorted_other = ORDER plus_avg_time_other BY avg_time;
-    GENERATE FLATTEN(group) AS (d,product,product_version,product_channel,app_build_id,sql),
+    GENERATE FLATTEN(group) AS (d,product,product_version,product_channel,sql),
              COUNT(sorted_other) AS doc_count,
              SUM(sorted_other.count) AS sum_count,
              Quantile(sorted_other.avg_time);

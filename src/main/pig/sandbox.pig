@@ -1,10 +1,11 @@
-register 'akela-0.2-SNAPSHOT.jar'
+register 'akela-0.3-SNAPSHOT.jar'
 register 'telemetry-toolbox-0.1-SNAPSHOT.jar'
 
 SET pig.logfile telemetry-sandbox.log;
 SET default_parallel 8;
 SET pig.tmpfilecompression true;
 SET pig.tmpfilecompression.codec lzo;
+/*SET pig.cachedbag.memusage 0.05;*/
 
 raw = LOAD 'hbase://telemetry' USING com.mozilla.pig.load.HBaseMultiScanLoader('20120125', '20120127', 'yyyyMMdd', 'data:json') AS (k:chararray, json:chararray);
 genmap = FOREACH raw GENERATE k,json,com.mozilla.pig.eval.json.JsonMap(json) AS json_map:map[];
@@ -152,3 +153,36 @@ filtered = FILTER genmap BY json_map#'info'#'appName' == 'Firefox' AND
                  (double)SIZE(json_map#'info'#'histograms'#'EARLY_GLUESTARTUP_READ_TRANSFER'#'values') > (double)json_map#'info'#'histograms'#'EARLY_GLUESTARTUP_READ_TRANSFER'#'bucket_count';
 keys = FOREACH filtered GENERATE k;
 STORE keys INTO 'suspect-keys';
+
+
+raw = LOAD 'hbase://telemetry' USING com.mozilla.pig.load.HBaseMultiScanLoader('20120220', '20120309', 'yyyyMMdd', 'data:json') AS (k:chararray, json:chararray);
+genmap = FOREACH raw GENERATE k,com.mozilla.pig.eval.json.JsonMap(json) AS json_map:map[];
+filtered = FILTER genmap BY json_map#'info'#'appName' == 'Firefox' AND
+                            SUBSTRING(json_map#'info'#'appVersion',0,2) == '13';
+buildids = FOREACH filtered GENERATE json_map#'info'#'platformBuildID' AS build_id:chararray;
+grpd = GROUP buildids BY build_id;
+counts = FOREACH grpd GENERATE group, COUNT(buildids);
+store counts into 'buildidcounts';
+
+/*
+raw = LOAD 'hbase://telemetry' USING com.mozilla.pig.load.HBaseMultiScanLoader('20120301', '20120301', 'yyyyMMdd', 'data:json') AS (k:chararray, json:chararray);
+genmap = FOREACH raw GENERATE k,com.mozilla.pig.eval.json.JsonMap(json) AS json_map:map[];
+filtered = FILTER genmap BY json_map#'info'#'appName' == 'Fennec' AND
+                            SUBSTRING(json_map#'info'#'appVersion',0,2) == '11' AND
+                            json_map#'info'#'OS' == 'Android' AND
+                            json_map#'info'#'version' == '2.6.32.9' AND
+                            json_map#'info'#'appBuildId' == '20120215221354';
+hist_values = FOREACH filtered GENERATE SUBSTRING(k,1,9) AS d:chararray, 
+                                        (chararray)json_map#'info'#'appName' AS product:chararray,
+                                        (chararray)json_map#'info'#'appVersion' AS product_version:chararray,
+                                        (chararray)json_map#'info'#'appUpdateChannel' AS product_channel:chararray, 
+                                        (chararray)json_map#'info'#'arch' AS arch:chararray,
+                                        (chararray)json_map#'info'#'OS' AS os:chararray, 
+                                        (chararray)json_map#'info'#'version' AS os_version:chararray,
+                                        (chararray)json_map#'info'#'appBuildID' AS app_build_id:chararray,
+                                        (chararray)json_map#'info'#'platformBuildID' AS plat_build_id:chararray,
+                                        SUBSTRING(k,9,45) AS doc_id:chararray,
+                                        FLATTEN(com.mozilla.telemetry.pig.eval.HistogramValueTuples(json_map#'histograms', json_map#'simpleMeasurements')) AS (hist_name:chararray, v:chararray, count:double, sum:long, bucket_count:int, min_range:int, max_range:int, hist_type:int);
+secondary_filter = FILTER hist_values BY hist_name == 'XMLHTTPREQUEST_ASYNC_OR_SYNC';
+store secondary_filter into 'fennec-dataset';
+*/

@@ -24,12 +24,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.text.ParseException;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
@@ -48,11 +42,30 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.node.Node;
 import org.elasticsearch.node.NodeBuilder;
 
-import com.mozilla.telemetry.elasticsearch.TelemetryDataAggregate.Histogram;
-
 public class AggregateElasticSearchIndexer {
 
     private static final Logger LOG = Logger.getLogger(AggregateElasticSearchIndexer.class);
+    
+    private static final int VALID_ROW_SIZE = 19;
+    private static final int DATE_IDX = 0;
+    private static final int PRODUCT_IDX = 1;
+    private static final int PRODUCT_VERSION_IDX = 2;
+    private static final int CHANNEL_IDX = 3;
+    private static final int ARCH_IDX = 4;
+    private static final int OS_IDX = 5;
+    private static final int OS_VERSION_IDX = 6;
+    private static final int APP_BUILD_ID_IDX = 7;
+    private static final int PLAT_BUILD_ID_IDX = 8;
+    private static final int HIST_NAME_IDX = 9;
+    private static final int HIST_VALUE_IDX = 10;
+    private static final int BUCKET_COUNT_IDX = 11;
+    private static final int MIN_RANGE_IDX = 12;
+    private static final int MAX_RANGE_IDX = 13;
+    private static final int HIST_TYPE_IDX = 14;
+    private static final int VALUE_SUM_COUNT_IDX = 15;
+    private static final int VALUE_SUM_SUM_IDX = 16;
+    private static final int VALUE_DOC_COUNT_IDX = 17; // currently field is not used but this could prove useful in the future
+    private static final int HIST_NAME_DOC_COUNT_IDX = 18;
     
     private Configuration conf;
     private FileSystem fs;
@@ -131,92 +144,6 @@ public class AggregateElasticSearchIndexer {
         }
     }
     
-    /**
-     * Corrects buckets if there are more actual buckets than configured buckets for
-     * a given histogram
-     * @param tdata
-     */
-    @SuppressWarnings({ "unchecked", "rawtypes" })
-    private boolean checkAndCorrectBuckets(TelemetryDataAggregate tdata) {
-        LOG.info(String.format("Checking buckets for %s %s (%s,%s) on %s %s", tdata.getInfo().getAppName(), tdata.getInfo().getAppVersion(), tdata.getInfo().getAppBuildId(), tdata.getInfo().getPlatformBuildId(), tdata.getInfo().getOS(), tdata.getInfo().getVersion()));
-        
-        boolean wasCorrected = false;
-        for (Map.Entry<String,Histogram> entry : tdata.getHistograms().entrySet()) {
-            String histName = entry.getKey();
-            Histogram hist = entry.getValue();
-            List<int[]> values = hist.getValues();
-            if (hist.getBucketCount() < values.size() && !histName.startsWith("SIMPLE_MEASURES")) {
-                
-                LOG.info(String.format("%s histogram was configured for %d buckets but actually has %d.", entry.getKey(), hist.getBucketCount(), values.size()));
-                
-                // Sort by counts
-                Collections.sort(values, Collections.reverseOrder(new Comparator() {
-                    @Override
-                    public int compare(Object o1, Object o2) {
-                        int[] a1 = (int[])o1;
-                        int[] a2 = (int[])o2;
-                        
-                        if (a1.length == 2 && a2.length == 2) {
-                            return a1[1] < a2[1] ? -1 : a1[1] > a2[1] ? 1 : 0;
-                        }
-                        
-                        return 0;
-                    }         
-                }));
-                
-                // All values beyond the hist bucket count at this point need to be combined into neighboring buckets
-                List<int[]> mergeValues = values.subList(hist.getBucketCount(), values.size());
-                Set<Integer> mergeBuckets = new HashSet<Integer>();
-                for (int i=0; i < mergeValues.size(); i++) {
-                    int[] vs = mergeValues.get(i);
-                    mergeBuckets.add(vs[0]);
-                }
-                
-                // Sort by buckets
-                Collections.sort(values, new Comparator() {
-                    @Override
-                    public int compare(Object o1, Object o2) {
-                        int[] a1 = (int[])o1;
-                        int[] a2 = (int[])o2;
-                        
-                        if (a1.length == 2 && a2.length == 2) {
-                            return a1[0] < a2[0] ? -1 : a1[0] > a2[0] ? 1 : 0;
-                        }
-                        
-                        return 0;
-                    }         
-                });
-                
-                // Merge process
-                for (int i=0; i <= hist.getBucketCount() && i < values.size(); i++) {
-                    int[] cur = values.get(i);
-                    // If this bucket is in the merge set then merge it into it's neighbor above
-                    // or below in the case it is the last bucket
-                    if (mergeBuckets.contains(cur[0])) {
-                        if ((i+1) < values.size()) {
-                            int[] above = values.get(i+1);
-                            LOG.info(String.format("Merging bucket %d=%d into %d=%d",cur[0],cur[1],above[0],above[1]));
-                            above[1] += cur[1];
-                            values.set(i+1, above);
-                        } else {
-                            int[] below = values.get(i-1);
-                            LOG.info(String.format("Merging bucket %d=%d into %d=%d",cur[0],cur[1],below[0],below[1]));
-                            below[1] += cur[1];
-                            values.set(i-1, below);
-                        }
-                        
-                        // Remove this bucket from the list
-                        values.remove(i);
-                    }
-                }
-
-                wasCorrected = true;
-            }
-        }
-        
-        return wasCorrected;
-    }
-    
     public void indexHDFSData(String inputPath) throws IOException {
         ObjectMapper jsonMapper = new ObjectMapper();
         Pattern tab = Pattern.compile("\t");
@@ -239,9 +166,10 @@ public class AggregateElasticSearchIndexer {
                     if (prevSplits == null) {
                         startNewObject = true;
                     } else if (prevSplits.length == splits.length) {
-                        for (int i=0; i <= 7; i++) {
+                        for (int i=0; i <= 8; i++) {
                             if (!prevSplits[i].equals(splits[i])) {
                                 startNewObject = true;
+                                break;
                             }
                         }
                     }
@@ -249,14 +177,9 @@ public class AggregateElasticSearchIndexer {
                     if (startNewObject) {
                         // Write out previous object if there is one
                         if (tdata != null) {
-                            // Check the buckets and correct them by merging
-//                            if (checkAndCorrectBuckets(tdata)) {
-//                                System.out.println(jsonMapper.writeValueAsString(tdata));
-//                            }
                             ByteArrayOutputStream baos = new ByteArrayOutputStream();
                             jsonMapper.writeValue(baos, tdata);
 
-                            // Add this JSON data to BulkRequest
                             brb.add(client.prepareIndex(indexName, typeName).setSource(baos.toByteArray()));
                             if (brb.numberOfActions() >= 100) {
                                 int numActions = brb.numberOfActions();
@@ -279,36 +202,36 @@ public class AggregateElasticSearchIndexer {
                         }
                         
                         tdata = new TelemetryDataAggregate();
-                        tdata.setDate(splits[0]);
+                        tdata.setDate(splits[DATE_IDX]);
                         TelemetryDataAggregate.Info info = new TelemetryDataAggregate.Info();
-                        info.setAppName(splits[1]);
-                        info.setAppVersion(splits[2]);
-                        info.setAppUpdateChannel(splits[3]);
-                        info.setArch(splits[4]);
-                        info.setOS(splits[5]);
-                        info.setVersion(splits[6]);
-                        info.setAppBuildId(splits[7]);
-                        info.setPlatformBuildId(splits[8]);
+                        info.setAppName(splits[PRODUCT_IDX]);
+                        info.setAppVersion(splits[PRODUCT_VERSION_IDX]);
+                        info.setAppUpdateChannel(splits[CHANNEL_IDX]);
+                        info.setArch(splits[ARCH_IDX]);
+                        info.setOS(splits[OS_IDX]);
+                        info.setVersion(splits[OS_VERSION_IDX]);
+                        info.setAppBuildId(splits[APP_BUILD_ID_IDX]);
+                        info.setPlatformBuildId(splits[PLAT_BUILD_ID_IDX]);
                         tdata.setInfo(info);
                     }
                     
                     try {
-                        if (splits.length == 18) {
+                        if (splits.length == VALID_ROW_SIZE) {
                             // Make value int safe
-                            String safeValue = splits[10].replaceAll("[a-zA-Z]", "");
-                            String histName = splits[9];
+                            String safeValue = splits[HIST_VALUE_IDX]; // .replaceAll("[a-zA-Z]", "");
+                            String histName = splits[HIST_NAME_IDX];
                             // Add histogram entry
-                            tdata.addOrPutHistogramValue(histName, safeValue, (int)Float.parseFloat(splits[15]));
+                            tdata.addOrPutHistogramValue(histName, safeValue, (int)Float.parseFloat(splits[VALUE_SUM_COUNT_IDX]));
                             // increment histogram count
-                            tdata.incrementHistogramCount(histName, Integer.parseInt(splits[16]));
+                            tdata.incrementHistogramCount(histName, Integer.parseInt(splits[HIST_NAME_DOC_COUNT_IDX]));
                             // set the histogram sum
-                            tdata.setHistogramSum(histName, (long)Double.parseDouble(splits[17]));
+                            tdata.setHistogramSum(histName, (long)Double.parseDouble(splits[VALUE_SUM_SUM_IDX]));
                             // set the histogram bucket count
-                            tdata.setHistogramBucketCount(histName, Integer.parseInt(splits[11]));
+                            tdata.setHistogramBucketCount(histName, Integer.parseInt(splits[BUCKET_COUNT_IDX]));
                             // set the hisotgram range
-                            tdata.setHistogramRange(histName, Integer.parseInt(splits[12]), Integer.parseInt(splits[13]));
+                            tdata.setHistogramRange(histName, Integer.parseInt(splits[MIN_RANGE_IDX]), Integer.parseInt(splits[MAX_RANGE_IDX]));
                             // set the histogram type
-                            tdata.setHistogramType(histName, Integer.parseInt(splits[14]));
+                            tdata.setHistogramType(histName, Integer.parseInt(splits[HIST_TYPE_IDX]));
                         } else {
                             LOG.error("Encountered invalid split length for line: " + line);
                         }
