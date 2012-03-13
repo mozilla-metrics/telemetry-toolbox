@@ -166,7 +166,7 @@ public class AggregateElasticSearchIndexer {
                     if (prevSplits == null) {
                         startNewObject = true;
                     } else if (prevSplits.length == splits.length) {
-                        for (int i=0; i <= 8; i++) {
+                        for (int i=DATE_IDX; i <= PLAT_BUILD_ID_IDX; i++) {
                             if (!prevSplits[i].equals(splits[i])) {
                                 startNewObject = true;
                                 break;
@@ -206,22 +206,32 @@ public class AggregateElasticSearchIndexer {
                         TelemetryDataAggregate.Info info = new TelemetryDataAggregate.Info();
                         info.setAppName(splits[PRODUCT_IDX]);
                         info.setAppVersion(splits[PRODUCT_VERSION_IDX]);
-                        info.setAppUpdateChannel(splits[CHANNEL_IDX]);
+                        if ("NA".equals(splits[CHANNEL_IDX])) {
+                            info.setAppUpdateChannel("");
+                        } else {
+                            info.setAppUpdateChannel(splits[CHANNEL_IDX]);
+                        }
                         info.setArch(splits[ARCH_IDX]);
                         info.setOS(splits[OS_IDX]);
                         info.setVersion(splits[OS_VERSION_IDX]);
                         info.setAppBuildId(splits[APP_BUILD_ID_IDX]);
                         info.setPlatformBuildId(splits[PLAT_BUILD_ID_IDX]);
                         tdata.setInfo(info);
+                        if (LOG.isDebugEnabled()) {
+                            LOG.info(String.format("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s", tdata.getDate(), tdata.getInfo().getAppName(), 
+                                        tdata.getInfo().getAppVersion(), tdata.getInfo().getAppUpdateChannel(), tdata.getInfo().getArch(),
+                                        tdata.getInfo().getOS(), tdata.getInfo().getVersion(), tdata.getInfo().getAppBuildId(),
+                                        tdata.getInfo().getPlatformBuildId()));
+                        }
                     }
                     
                     try {
                         if (splits.length == VALID_ROW_SIZE) {
                             // Make value int safe
-                            String safeValue = splits[HIST_VALUE_IDX]; // .replaceAll("[a-zA-Z]", "");
+                            String safeValue = splits[HIST_VALUE_IDX].replaceAll("[^0-9]", "");
                             String histName = splits[HIST_NAME_IDX];
                             // Add histogram entry
-                            tdata.addOrPutHistogramValue(histName, safeValue, (int)Float.parseFloat(splits[VALUE_SUM_COUNT_IDX]));
+                            tdata.addOrPutHistogramValue(histName, safeValue, (long)Double.parseDouble(splits[VALUE_SUM_COUNT_IDX]));
                             // increment histogram count
                             tdata.incrementHistogramCount(histName, Integer.parseInt(splits[HIST_NAME_DOC_COUNT_IDX]));
                             // set the histogram sum

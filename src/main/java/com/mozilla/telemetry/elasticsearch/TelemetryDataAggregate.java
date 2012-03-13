@@ -106,7 +106,7 @@ public class TelemetryDataAggregate {
     public static class Histogram {
         
         @JsonProperty("values")
-        private List<int[]> values = new ArrayList<int[]>();
+        private List<long[]> values = new ArrayList<long[]>();
         @JsonProperty("count")
         private int count;
         @JsonProperty("sum")
@@ -118,15 +118,15 @@ public class TelemetryDataAggregate {
         @JsonProperty("histogram_type")
         private int histogramType;
         
-        public List<int[]> getValues() {
+        public List<long[]> getValues() {
             return values;
         }
 
-        public void addValue(int[] value) {
+        public void addValue(long[] value) {
             this.values.add(value);
         }
         
-        public void setValues(List<int[]> values) {
+        public void setValues(List<long[]> values) {
             this.values = values;
         }
 
@@ -213,7 +213,7 @@ public class TelemetryDataAggregate {
         return histograms;
     }
 
-    public void addOrPutHistogramValue(String key, String histValueKey, Integer histValue) {
+    public void addOrPutHistogramValue(String key, String histValueKey, Long histValue) {
         Histogram hist = null;
         if (histograms.containsKey(key)) {
             hist = histograms.get(key);
@@ -222,7 +222,7 @@ public class TelemetryDataAggregate {
         }
 
         if (!"".equals(histValueKey.trim())) {
-            hist.addValue(new int[] { Integer.parseInt(histValueKey), histValue });
+            hist.addValue(new long[] { Long.parseLong(histValueKey), histValue });
             histograms.put(key, hist);
             histogramNames.add(key);
         }
