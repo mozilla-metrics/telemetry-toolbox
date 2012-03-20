@@ -228,7 +228,7 @@ public class TelemetryDataAggregate {
         }
     }
     
-    public void incrementHistogramCount(String key, int count) {
+    public void setHistogramCount(String key, int count) {
         Histogram hist = null;
         if (histograms.containsKey(key)) {
             hist = histograms.get(key);
@@ -236,7 +236,7 @@ public class TelemetryDataAggregate {
             hist = new Histogram();
         }
         
-        hist.incrementCount(count);
+        hist.setCount(count);
         histograms.put(key, hist);
     }
 

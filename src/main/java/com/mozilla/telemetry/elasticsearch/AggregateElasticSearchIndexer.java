@@ -232,8 +232,8 @@ public class AggregateElasticSearchIndexer {
                             String histName = splits[HIST_NAME_IDX];
                             // Add histogram entry
                             tdata.addOrPutHistogramValue(histName, safeValue, (long)Double.parseDouble(splits[VALUE_SUM_COUNT_IDX]));
-                            // increment histogram count
-                            tdata.incrementHistogramCount(histName, Integer.parseInt(splits[HIST_NAME_DOC_COUNT_IDX]));
+                            // set histogram count
+                            tdata.setHistogramCount(histName, Integer.parseInt(splits[HIST_NAME_DOC_COUNT_IDX]));
                             // set the histogram sum
                             tdata.setHistogramSum(histName, (long)Double.parseDouble(splits[VALUE_SUM_SUM_IDX]));
                             // set the histogram bucket count
