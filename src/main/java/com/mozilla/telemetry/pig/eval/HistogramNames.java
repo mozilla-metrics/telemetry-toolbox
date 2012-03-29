@@ -28,7 +28,7 @@ import org.apache.pig.data.DataBag;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 
-public class HistogramNames  extends EvalFunc<DataBag> {
+public class HistogramNames extends EvalFunc<DataBag> {
     
     private static BagFactory bagFactory = BagFactory.getInstance();
     private static TupleFactory tupleFactory = TupleFactory.getInstance();

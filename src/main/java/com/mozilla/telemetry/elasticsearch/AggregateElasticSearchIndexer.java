@@ -173,60 +173,60 @@ public class AggregateElasticSearchIndexer {
                             }
                         }
                     }
-                    
-                    if (startNewObject) {
-                        // Write out previous object if there is one
-                        if (tdata != null) {
-                            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                            jsonMapper.writeValue(baos, tdata);
-
-                            brb.add(client.prepareIndex(indexName, typeName).setSource(baos.toByteArray()));
-                            if (brb.numberOfActions() >= 100) {
-                                int numActions = brb.numberOfActions();
-                                LOG.info("Sending BulkRequest ...");
-                                BulkResponse response = brb.execute().actionGet();
-                                LOG.info(String.format("BulkRequest took: %d ms", response.getTookInMillis()));
-                                if (response.hasFailures()) {
-                                    for (BulkItemResponse b : response) {
-                                        LOG.error("Failed on id: " + b.getId() + " message: " + b.getFailureMessage());
-                                    }
-                                    break;
-                                }
-                                
-                                counter += numActions;
-                                LOG.info("Total documents indexed: " + counter);
-                                
-                                // Reset the bulk request object
-                                brb = client.prepareBulk();
-                            }
-                        }
-                        
-                        tdata = new TelemetryDataAggregate();
-                        tdata.setDate(splits[DATE_IDX]);
-                        TelemetryDataAggregate.Info info = new TelemetryDataAggregate.Info();
-                        info.setAppName(splits[PRODUCT_IDX]);
-                        info.setAppVersion(splits[PRODUCT_VERSION_IDX]);
-                        if ("NA".equals(splits[CHANNEL_IDX])) {
-                            info.setAppUpdateChannel("");
-                        } else {
-                            info.setAppUpdateChannel(splits[CHANNEL_IDX]);
-                        }
-                        info.setArch(splits[ARCH_IDX]);
-                        info.setOS(splits[OS_IDX]);
-                        info.setVersion(splits[OS_VERSION_IDX]);
-                        info.setAppBuildId(splits[APP_BUILD_ID_IDX]);
-                        info.setPlatformBuildId(splits[PLAT_BUILD_ID_IDX]);
-                        tdata.setInfo(info);
-                        if (LOG.isDebugEnabled()) {
-                            LOG.info(String.format("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s", tdata.getDate(), tdata.getInfo().getAppName(), 
-                                        tdata.getInfo().getAppVersion(), tdata.getInfo().getAppUpdateChannel(), tdata.getInfo().getArch(),
-                                        tdata.getInfo().getOS(), tdata.getInfo().getVersion(), tdata.getInfo().getAppBuildId(),
-                                        tdata.getInfo().getPlatformBuildId()));
-                        }
-                    }
-                    
+ 
                     try {
                         if (splits.length == VALID_ROW_SIZE) {
+                            if (startNewObject) {
+                                // Write out previous object if there is one
+                                if (tdata != null) {
+                                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                                    jsonMapper.writeValue(baos, tdata);
+
+                                    brb.add(client.prepareIndex(indexName, typeName).setSource(baos.toByteArray()));
+                                    if (brb.numberOfActions() >= 100) {
+                                        int numActions = brb.numberOfActions();
+                                        LOG.info("Sending BulkRequest ...");
+                                        BulkResponse response = brb.execute().actionGet();
+                                        LOG.info(String.format("BulkRequest took: %d ms", response.getTookInMillis()));
+                                        if (response.hasFailures()) {
+                                            for (BulkItemResponse b : response) {
+                                                LOG.error("Failed on id: " + b.getId() + " message: " + b.getFailureMessage());
+                                            }
+                                            break;
+                                        }
+                                        
+                                        counter += numActions;
+                                        LOG.info("Total documents indexed: " + counter);
+                                        
+                                        // Reset the bulk request object
+                                        brb = client.prepareBulk();
+                                    }
+                                }
+                                
+                                tdata = new TelemetryDataAggregate();
+                                tdata.setDate(splits[DATE_IDX]);
+                                TelemetryDataAggregate.Info info = new TelemetryDataAggregate.Info();
+                                info.setAppName(splits[PRODUCT_IDX]);
+                                info.setAppVersion(splits[PRODUCT_VERSION_IDX]);
+                                if ("NA".equals(splits[CHANNEL_IDX])) {
+                                    info.setAppUpdateChannel("");
+                                } else {
+                                    info.setAppUpdateChannel(splits[CHANNEL_IDX]);
+                                }
+                                info.setArch(splits[ARCH_IDX]);
+                                info.setOS(splits[OS_IDX]);
+                                info.setVersion(splits[OS_VERSION_IDX]);
+                                info.setAppBuildId(splits[APP_BUILD_ID_IDX]);
+                                info.setPlatformBuildId(splits[PLAT_BUILD_ID_IDX]);
+                                tdata.setInfo(info);
+                                if (LOG.isDebugEnabled()) {
+                                    LOG.info(String.format("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s", tdata.getDate(), tdata.getInfo().getAppName(), 
+                                                tdata.getInfo().getAppVersion(), tdata.getInfo().getAppUpdateChannel(), tdata.getInfo().getArch(),
+                                                tdata.getInfo().getOS(), tdata.getInfo().getVersion(), tdata.getInfo().getAppBuildId(),
+                                                tdata.getInfo().getPlatformBuildId()));
+                                }
+                            }
+                            
                             // Make value int safe
                             String safeValue = splits[HIST_VALUE_IDX].replaceAll("[^0-9]", "");
                             String histName = splits[HIST_NAME_IDX];
@@ -251,6 +251,8 @@ public class AggregateElasticSearchIndexer {
                         for (String s : splits) {
                             LOG.warn("\t" + s);
                         }
+                    } catch (Exception e) {
+                        
                     }
                     
                     prevSplits = splits;

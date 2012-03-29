@@ -6,6 +6,8 @@ SET pig.logfile telemetry-slowsql.log;
 SET default_parallel 8;
 SET pig.tmpfilecompression true;
 SET pig.tmpfilecompression.codec lzo;
+SET mapred.compress.map.output true;
+SET mapred.map.output.compression.codec org.apache.hadoop.io.compress.SnappyCodec;
 
 define SlowSqlTuples com.mozilla.telemetry.pig.eval.SlowSqlTuples();
 define Quantile datafu.pig.stats.Quantile('0.0','0.25','0.5','0.75','0.95','1.0');

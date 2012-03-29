@@ -1,5 +1,5 @@
 register 'akela-0.3-SNAPSHOT.jar'
-register 'telemetry-toolbox-0.1-SNAPSHOT.jar'
+register 'telemetry-toolbox-0.2-SNAPSHOT.jar'
 register 'datafu-0.0.4.jar'
 
 SET pig.logfile telemetry-aggregates.log;
@@ -22,11 +22,9 @@ filtered_genmap = FILTER genmap BY (json_map#'info'#'appName' == 'Firefox' OR
 uptimes = FOREACH filtered_genmap GENERATE SUBSTRING(k,1,9) AS d:chararray, 
                                            (chararray)json_map#'info'#'appName' AS product:chararray,
                                            (chararray)json_map#'info'#'appVersion' AS product_version:chararray,
-                                           ConvertNull((chararray)json_map#'info'#'appUpdateChannel') AS product_channel:chararray,
-                                           (chararray)json_map#'info'#'OS' AS os:chararray,
                                            (int)json_map#'simpleMeasurements'#'uptime' AS uptime:int;
-filtered_nulls = FILTER uptimes BY uptime IS NOT NULL;
-grpd = GROUP filtered_nulls BY (d,product,product_version,product_channel,os);
+filtered_nulls = FILTER uptimes BY uptime IS NOT NULL AND uptime > 0 AND uptime < 1441;
+grpd = GROUP filtered_nulls BY (d,product,product_version);
 quants_by_factors = FOREACH grpd GENERATE group, Quantile(filtered_nulls.uptime);
 
 STORE quants_by_factors INTO 'uptime-quantiles-$start_date-$end_date';

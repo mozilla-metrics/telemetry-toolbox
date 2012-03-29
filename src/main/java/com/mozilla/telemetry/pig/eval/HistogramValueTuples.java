@@ -31,7 +31,7 @@ import org.apache.pig.data.TupleFactory;
 
 public class HistogramValueTuples extends EvalFunc<DataBag> {
 
-    public static enum ERRORS { BAD_HISTOGRAM_TUPLE };
+    public static enum ERRORS { BAD_HISTOGRAM_TUPLE, NON_NUMERIC_HIST_VALUE };
     
     private static BagFactory bagFactory = BagFactory.getInstance();
     private static TupleFactory tupleFactory = TupleFactory.getInstance();
@@ -47,20 +47,43 @@ public class HistogramValueTuples extends EvalFunc<DataBag> {
     private static final int HIST_TYPE_IDX = 7;
     
     private static final String SIMPLE_MEASURES_PREFIX = "SIMPLE_MEASURES_";
-    private static final long DAY_IN_MINUTES = 1440;
+    private static final int DAY_IN_MINUTES = 1440;
+
+    private long[] uptimeBuckets; 
+            
+    public HistogramValueTuples() {
+        // setup the uptime buckets
+        uptimeBuckets = new long[(9 + ((DAY_IN_MINUTES-180) / 60))];
+        uptimeBuckets[0] = 0;
+        uptimeBuckets[1] = 5;
+        uptimeBuckets[2] = 15;
+        uptimeBuckets[3] = 30;
+        uptimeBuckets[4] = 60;
+        uptimeBuckets[5] = 90;
+        uptimeBuckets[6] = 120;
+        int i=7;
+        for (int t=180; t <= DAY_IN_MINUTES; t += 60) {
+            uptimeBuckets[i] = t;
+            i++;
+        }
+        uptimeBuckets[uptimeBuckets.length-1] = 2880;
+    }
     
     /**
      * @param uptime
      * @return
      */
-    private String bucketUptime(long uptime) {
-        String bucket = "0";
-        if (uptime < 0) {
-            bucket = "-1";
-        } else if (uptime >= 0 && uptime <= DAY_IN_MINUTES) {
-            bucket = "720";
-        } else if (uptime > DAY_IN_MINUTES) {
-            bucket = "1441";
+    private String bucketUptime(int uptime) {
+        String bucket = "-1";
+        for (int i=0; i < uptimeBuckets.length; i++) {
+            if ((i+1) < uptimeBuckets.length) {
+                if (uptime >= uptimeBuckets[i] && uptime < uptimeBuckets[i+1]) {
+                    bucket = String.valueOf(uptimeBuckets[i]);
+                    break;
+                }   
+            } else {
+                bucket = String.valueOf(uptimeBuckets[i]);
+            }
         }
         
         return bucket;
@@ -124,9 +147,16 @@ public class HistogramValueTuples extends EvalFunc<DataBag> {
                     }
 
                     for (Map.Entry<String, Object> v : values.entrySet()) {
+                        long histValue = -1;
+                        try {
+                            histValue = Long.parseLong(v.getKey());
+                        } catch (NumberFormatException e) {
+                            pigLogger.warn(this, "Non-numeric histogram value incountered", ERRORS.NON_NUMERIC_HIST_VALUE);
+                            continue;
+                        }
                         Tuple t = tupleFactory.newTuple(OUTPUT_TUPLE_SIZE);
                         t.set(HIST_NAME_IDX, hist.getKey());
-                        t.set(HIST_VALUE_IDX, v.getKey());
+                        t.set(HIST_VALUE_IDX, histValue);
                         t.set(VALUE_COUNT_IDX, ((Number)v.getValue()).doubleValue());
                         t.set(SUM_IDX, sum);
                         t.set(BUCKET_COUNT_IDX, bucketCount);
@@ -170,7 +200,7 @@ public class HistogramValueTuples extends EvalFunc<DataBag> {
                     int minRange = 0, maxRange = 0;
                     int histogramType = 0;
                     if ("uptime".equals(measure.getKey())) {
-                        t.set(HIST_VALUE_IDX, bucketUptime(timeValue));
+                        t.set(HIST_VALUE_IDX, bucketUptime((int)timeValue));
                         bucketCount = 3;
                         maxRange = 1441;
                     } else if ("startupInterrupted".equals(measure.getKey())) {
@@ -198,5 +228,4 @@ public class HistogramValueTuples extends EvalFunc<DataBag> {
         
         return output;
     }
-
 }
