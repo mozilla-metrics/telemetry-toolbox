@@ -28,6 +28,8 @@ import org.apache.pig.data.DataBag;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 
+import com.mozilla.telemetry.pig.eval.HistogramValueTuples.ERRORS;
+
 public class HistogramNames extends EvalFunc<DataBag> {
     
     private static BagFactory bagFactory = BagFactory.getInstance();
@@ -42,23 +44,29 @@ public class HistogramNames extends EvalFunc<DataBag> {
             return null;
         }
         
-        DataBag output = bagFactory.newDefaultBag();
-        Map<String,Map<String,Object>> m = (Map<String,Map<String,Object>>)input.get(0);
-        if (m != null) {
-            for (String histName : m.keySet()) {
-                output.add(tupleFactory.newTuple(histName));
+        try {
+            DataBag output = bagFactory.newDefaultBag();
+            Map<String,Map<String,Object>> m = (Map<String,Map<String,Object>>)input.get(0);
+            if (m != null) {
+                for (String histName : m.keySet()) {
+                    output.add(tupleFactory.newTuple(histName));
+                }
             }
+            
+            Map<String,Object> smMap = (Map<String,Object>)input.get(1);
+            if (smMap != null) {
+                for (String measureName : smMap.keySet()) {
+                    String measureKey = SIMPLE_MEASURES_PREFIX + measureName.toUpperCase();
+                    output.add(tupleFactory.newTuple(measureKey));
+                }
+            }
+            
+            return output;
+        } catch (Exception e) {
+            warn("Exception while processing histogram names", ERRORS.GENERIC_ERROR);
         }
         
-        Map<String,Object> smMap = (Map<String,Object>)input.get(1);
-        if (smMap != null) {
-            for (String measureName : smMap.keySet()) {
-                String measureKey = SIMPLE_MEASURES_PREFIX + measureName.toUpperCase();
-                output.add(tupleFactory.newTuple(measureKey));
-            }
-        }
-        
-        return output;
+        return null;
     }
     
 }

@@ -13,12 +13,16 @@ define HistogramValueTuples com.mozilla.telemetry.pig.eval.HistogramValueTuples(
 define HistogramNames com.mozilla.telemetry.pig.eval.HistogramNames();
 define ConvertNull com.mozilla.pig.eval.ConvertNull('NA');
 define OsVersionNormalizer com.mozilla.pig.eval.regex.FindOrReturn('^[0-9](\\.*[0-9]*){1}');
+define IsMap com.mozilla.pig.filter.map.IsMap();
 
 raw = LOAD 'hbase://telemetry' USING com.mozilla.pig.load.HBaseMultiScanLoader('$start_date', '$end_date', 'yyyyMMdd', 'data:json') AS (k:chararray, json:chararray);
 genmap = FOREACH raw GENERATE k,com.mozilla.pig.eval.json.JsonMap(json) AS json_map:map[];
-filtered_genmap = FILTER genmap BY (json_map#'info'#'appName' == 'Firefox' OR 
-                                   json_map#'info'#'appName' == 'Thunderbird' OR 
-                                   json_map#'info'#'appName' == 'Fennec') AND
+filtered_genmap = FILTER genmap BY IsMap(json_map#'info') AND 
+                                   IsMap(json_map#'histograms') AND
+                                   IsMap(json_map#'simpleMeasurements') AND
+                                   (json_map#'info'#'appName' == 'Firefox' OR 
+                                    json_map#'info'#'appName' == 'Thunderbird' OR 
+                                    json_map#'info'#'appName' == 'Fennec') AND
                                    (json_map#'info'#'reason' == 'idle-daily' OR json_map#'info'#'reason' == 'saved-session');
 /* Create a dataset for generating histogram name level counts */
 hist_names = FOREACH filtered_genmap GENERATE SUBSTRING(k,1,9) AS d:chararray, 
