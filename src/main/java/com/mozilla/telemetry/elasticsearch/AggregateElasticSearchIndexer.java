@@ -20,7 +20,6 @@
 package com.mozilla.telemetry.elasticsearch;
 
 import java.io.BufferedReader;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.text.ParseException;
@@ -179,10 +178,7 @@ public class AggregateElasticSearchIndexer {
                             if (startNewObject) {
                                 // Write out previous object if there is one
                                 if (tdata != null) {
-                                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                                    jsonMapper.writeValue(baos, tdata);
-
-                                    brb.add(client.prepareIndex(indexName, typeName).setSource(baos.toByteArray()));
+                                    brb.add(client.prepareIndex(indexName, typeName).setSource(jsonMapper.writeValueAsBytes(tdata)));
                                     if (brb.numberOfActions() >= 100) {
                                         int numActions = brb.numberOfActions();
                                         LOG.info("Sending BulkRequest ...");
@@ -220,7 +216,7 @@ public class AggregateElasticSearchIndexer {
                                 info.setPlatformBuildId(splits[PLAT_BUILD_ID_IDX]);
                                 tdata.setInfo(info);
                                 if (LOG.isDebugEnabled()) {
-                                    LOG.info(String.format("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s", tdata.getDate(), tdata.getInfo().getAppName(), 
+                                    LOG.debug(String.format("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s", tdata.getDate(), tdata.getInfo().getAppName(), 
                                                 tdata.getInfo().getAppVersion(), tdata.getInfo().getAppUpdateChannel(), tdata.getInfo().getArch(),
                                                 tdata.getInfo().getOS(), tdata.getInfo().getVersion(), tdata.getInfo().getAppBuildId(),
                                                 tdata.getInfo().getPlatformBuildId()));
@@ -252,13 +248,16 @@ public class AggregateElasticSearchIndexer {
                             LOG.warn("\t" + s);
                         }
                     } catch (Exception e) {
-                        
+                        LOG.error("Generic exception catch", e);
                     }
                     
                     prevSplits = splits;
                 }
                 
                 // Index remaining docs if there are any
+                if (tdata != null) {
+                    brb.add(client.prepareIndex(indexName, typeName).setSource(jsonMapper.writeValueAsBytes(tdata)));
+                }
                 if (brb.numberOfActions() > 0) {
                     int numActions = brb.numberOfActions();
                     BulkResponse response = brb.execute().actionGet();

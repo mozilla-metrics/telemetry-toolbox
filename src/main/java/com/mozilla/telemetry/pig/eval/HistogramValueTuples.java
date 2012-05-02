@@ -223,9 +223,9 @@ public class HistogramValueTuples extends EvalFunc<DataBag> {
                             maxRange = 1;
                             histogramType = 2;
                         } else if ("startupCrashDetectionEnd".equals(measure.getKey())) {
-                            bucketCount = 45;
+                            bucketCount = 30;
                             minRange = 30000;
-                            maxRange = 120000;
+                            maxRange = 90000;
                             histogramType = 1;
                             t.set(HIST_VALUE_IDX, bucketGenericTime(timeValue, minRange, maxRange, ((maxRange-minRange)/bucketCount), "0"));
                         } else {

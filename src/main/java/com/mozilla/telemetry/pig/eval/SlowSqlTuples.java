@@ -54,7 +54,7 @@ public class SlowSqlTuples  extends EvalFunc<DataBag> {
                 
                 Tuple t = tupleFactory.newTuple();
                 Matcher matcher = spacePattern.matcher(entry.getKey());
-                t.append(matcher.replaceAll(" "));
+                t.append(matcher.replaceAll(" ").trim());
                 Iterator<Tuple> bagIter = dbag.iterator();
                 while (bagIter.hasNext()) {
                     Tuple inner = bagIter.next();
