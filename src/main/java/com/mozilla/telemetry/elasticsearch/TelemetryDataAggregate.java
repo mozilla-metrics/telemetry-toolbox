@@ -51,6 +51,8 @@ public class TelemetryDataAggregate {
         private String arch;
         @JsonProperty("version")
         private String version;
+        @JsonProperty("reason")
+        private String reason;
         
         public String getAppName() {
             return appName;
@@ -100,6 +102,12 @@ public class TelemetryDataAggregate {
         public void setVersion(String version) {
             this.version = version;
         }
+        public String getReason() {
+            return reason;
+        }
+        public void setReason(String reason) {
+            this.reason = reason;
+        }
     }
     
     @JsonAutoDetect(getterVisibility=Visibility.NONE)
@@ -114,7 +122,7 @@ public class TelemetryDataAggregate {
         @JsonProperty("bucket_count")
         private int bucketCount;
         @JsonProperty("range")
-        private int[] range = new int[2];
+        private long[] range = new long[2];
         @JsonProperty("histogram_type")
         private int histogramType;
         
@@ -158,16 +166,16 @@ public class TelemetryDataAggregate {
             this.bucketCount = bucketCount;
         }
 
-        public int[] getRange() {
+        public long[] getRange() {
             return range;
         }
 
-        public void setMinMaxRange(int minRange, int maxRange) {
+        public void setMinMaxRange(long minRange, long maxRange) {
             range[0] = minRange;
             range[1] = maxRange;
         }
         
-        public void setRange(int[] range) {
+        public void setRange(long[] range) {
             this.range = range;
         }
 
@@ -213,7 +221,7 @@ public class TelemetryDataAggregate {
         return histograms;
     }
 
-    public void addOrPutHistogramValue(String key, String histValueKey, Long histValue) {
+    public void addOrPutHistogramValue(String key, String histValueKey, Long histCount) {
         Histogram hist = null;
         if (histograms.containsKey(key)) {
             hist = histograms.get(key);
@@ -222,7 +230,9 @@ public class TelemetryDataAggregate {
         }
 
         if (!"".equals(histValueKey.trim())) {
-            hist.addValue(new long[] { Long.parseLong(histValueKey), histValue });
+            long hvk = Long.parseLong(histValueKey);
+            hist.addValue(new long[] { hvk, histCount });
+            hist.setSum(hist.getSum() + (hvk * histCount));
             histograms.put(key, hist);
             histogramNames.add(key);
         }
@@ -264,7 +274,7 @@ public class TelemetryDataAggregate {
         histograms.put(key, hist);
     }
     
-    public void setHistogramRange(String key, int minRange, int maxRange) {
+    public void setHistogramRange(String key, long minRange, long maxRange) {
         Histogram hist = null;
         if (histograms.containsKey(key)) {
             hist = histograms.get(key);
