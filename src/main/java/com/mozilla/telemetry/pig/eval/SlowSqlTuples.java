@@ -22,7 +22,6 @@ package com.mozilla.telemetry.pig.eval;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.pig.EvalFunc;
@@ -38,6 +37,7 @@ public class SlowSqlTuples  extends EvalFunc<DataBag> {
     private static TupleFactory tupleFactory = TupleFactory.getInstance();
     
     private Pattern spacePattern = Pattern.compile("\\s+");
+    private Pattern reservedCharacters = Pattern.compile("\u0001");
     
     @SuppressWarnings("unchecked")
     @Override
@@ -53,8 +53,8 @@ public class SlowSqlTuples  extends EvalFunc<DataBag> {
                 DefaultDataBag dbag = (DefaultDataBag)entry.getValue();
                 
                 Tuple t = tupleFactory.newTuple();
-                Matcher matcher = spacePattern.matcher(entry.getKey());
-                t.append(matcher.replaceAll(" ").trim());
+                String modified = reservedCharacters.matcher(entry.getKey()).replaceAll("\\\\u0001");
+                t.append(spacePattern.matcher(modified).replaceAll(" ").trim());
                 Iterator<Tuple> bagIter = dbag.iterator();
                 while (bagIter.hasNext()) {
                     Tuple inner = bagIter.next();

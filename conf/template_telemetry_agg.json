@@ -19,7 +19,6 @@
                 "enabled": false
             },
             "_source": { 
-                "compress": true,
                 "enabled": true,
                 "compress": true
             }
