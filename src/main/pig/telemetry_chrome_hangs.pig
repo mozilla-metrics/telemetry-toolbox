@@ -9,7 +9,7 @@ SET mapred.map.output.compression.codec org.apache.hadoop.io.compress.SnappyCode
 raw = LOAD 'hbase://telemetry' USING com.mozilla.pig.load.HBaseMultiScanLoader('$start_date', '$end_date', 'yyyyMMdd', 'data:json') AS (k:chararray, json:chararray);
 genmap = FOREACH raw GENERATE k,json,com.mozilla.pig.eval.json.JsonMap(json) AS json_map:map[];
 filtered_genmap = FILTER genmap BY json_map#'chromeHangs' IS NOT NULL AND 
-                                   com.mozilla.akela.pig.eval.Size(json_map#'chromeHangs') > 0 AND
+                                   com.mozilla.pig.eval.Size(json_map#'chromeHangs') > 0 AND
                                    json_map#'info'#'appUpdateChannel' == 'nightly-profiling';
 orig_data = FOREACH filtered_genmap GENERATE k,json;
 STORE orig_data INTO 'chrome-hangs-$start_date-$end_date';
