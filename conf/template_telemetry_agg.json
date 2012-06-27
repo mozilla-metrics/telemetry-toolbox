@@ -1,26 +1,29 @@
 {
-    "template" : "telemetry_agg_*",
-    "order" : 0,
+    "template": "telemetry_agg_*",
+    "order": 0,
+    "settings": {
+        "number_of_shards": 5,
+        "number_of_replicas": 1
+    },
     "mappings" : {
         "_default_" : {
-            "dynamic_templates": [
-            {
-                "default_strings": {
-                    "path_match": "*",
-                    "match_mapping_type": "string",
-                    "mapping": {
-                        "type": "string",
-                        "index": "not_analyzed"
+            "_all": { "enabled": false },
+            "_source": { "compress": true },
+            "properties": {
+                "info" : {
+                    "type" : "object",
+                    "properties" : {
+                        "appName" : { "type" : "string", "index" : "not_analyzed" },
+                        "appVersion" : { "type" : "string", "index" : "not_analyzed" },
+                        "appUpdateChannel" : { "type" : "string", "index" : "not_analyzed" },
+                        "OS" : { "type" : "string", "index" : "not_analyzed" },
+                        "appBuildID" : { "type" : "string", "index" : "not_analyzed" },
+                        "platformBuildID" : { "type" : "string", "index" : "not_analyzed" },
+                        "arch" : { "type" : "string", "index" : "not_analyzed" },
+                        "version" : { "type" : "string", "index" : "not_analyzed" },
+                        "reason" : { "type" : "string", "index" : "not_analyzed" }
                     }
                 }
-            }
-            ],
-            "_all": {
-                "enabled": false
-            },
-            "_source": { 
-                "enabled": true,
-                "compress": true
             }
         }
     }

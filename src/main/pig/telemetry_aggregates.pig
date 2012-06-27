@@ -2,7 +2,7 @@
 register 'akela-0.3-SNAPSHOT.jar'
 register 'telemetry-toolbox-0.2-SNAPSHOT.jar'
 register 'wonderdog-1.0-SNAPSHOT.jar'
-register 'elasticsearch/lib/0.17.9/*.jar'
+register 'elasticsearch/lib/0.19.3/*.jar'
 
 SET pig.logfile telemetry-aggregates.log;
 SET default_parallel 16;
@@ -81,6 +81,6 @@ agg_jsons = FOREACH grpd GENERATE AggregateJson(group, flat) AS agg_json:chararr
 /* STORE agg_jsons INTO 'telemetry-aggregates-json-$start_date-$end_date'; */
 
 /* Store JSON objects into ElasticSearch with Wonderdog */
-STORE agg_jsons INTO 'es://telemetry_agg_$start_date/data?json=true&alias=telemetry&size=$es_size&tasks=$es_tasks' 
+STORE agg_jsons INTO 'es://$index_name/data?json=true&alias=telemetry&size=$es_size&tasks=$es_tasks' 
                 USING com.infochimps.elasticsearch.pig.ElasticSearchStorage('$es_config_path',
                                                                             '$es_plugins_path');

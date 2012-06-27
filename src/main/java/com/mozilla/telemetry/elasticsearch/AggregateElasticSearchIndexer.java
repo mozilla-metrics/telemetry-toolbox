@@ -35,7 +35,7 @@ import org.elasticsearch.action.bulk.BulkItemResponse;
 import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.client.AdminClient;
 import org.elasticsearch.client.Client;
-import org.elasticsearch.client.action.bulk.BulkRequestBuilder;
+import org.elasticsearch.action.bulk.BulkRequestBuilder;
 import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.node.Node;
@@ -106,20 +106,15 @@ public class AggregateElasticSearchIndexer {
     public void prepareIndexForBulk() {
         // Make sure to have the index available.
         adminClient = client.admin();
-        if (adminClient.indices().prepareExists(indexName).execute().actionGet().exists()) {
-            LOG.info(String.format("Deleting existing index '%s'", indexName));
-            boolean success = adminClient.indices().prepareDelete(indexName).execute().actionGet().acknowledged();
-            LOG.info(String.format("delete index: %s", (success ? "succeeded" : "failed")));
+        if (!adminClient.indices().prepareExists(indexName).execute().actionGet().exists()) {
+            LOG.info(String.format("Creating index '%s'", indexName));
+            Settings settings = ImmutableSettings.settingsBuilder().put("index.number_of_replicas", 0).build();
+            boolean success = adminClient.indices().prepareCreate(indexName).setSettings(settings).execute().actionGet().acknowledged();
+            LOG.info(String.format("index.number_of_replicas set to 0: %s", (success ? "succeeded" : "failed")));
+            LOG.info(String.format("Waiting for index '%s'...", indexName));
+            adminClient.cluster().prepareHealth(indexName).setWaitForNodes(">0").execute().actionGet();
         }
-        
-        LOG.info(String.format("Creating index '%s'", indexName));
-        Settings settings = ImmutableSettings.settingsBuilder().put("index.number_of_replicas", 0).build();
-        boolean success = adminClient.indices().prepareCreate(indexName).setSettings(settings).execute().actionGet().acknowledged();
-        LOG.info(String.format("index.number_of_replicas set to 0: %s", (success ? "succeeded" : "failed")));
-        
-        LOG.info(String.format("Waiting for index '%s'...", indexName));
-        adminClient.cluster().prepareHealth(indexName).setWaitForNodes(">0").execute().actionGet();
-        
+
         // Set refresh interval to -1
         Settings updateSettings = ImmutableSettings.settingsBuilder()
                                     .put("index.refresh_interval", "-1")
@@ -131,11 +126,11 @@ public class AggregateElasticSearchIndexer {
     public void prepareIndexForQuery() {
         // Set replicas back to 1 and refresh interval to 1s
         Settings settings = ImmutableSettings.settingsBuilder()
-                                //.put("index.number_of_replicas", 1)
-                                .put("index.refresh_interval", "1s")
+                                .put("index.number_of_replicas", 1)
+                                .put("index.refresh_interval", "300s")
                                 .put("merge.policy.merge_factor", 10).build();
         adminClient.indices().prepareUpdateSettings(indexName).setSettings(settings).execute().actionGet();
-        LOG.info("index.refresh_interval set to 1s");
+        LOG.info("index.refresh_interval set to 300s");
         
         if (aliasName != null) {
             boolean success = adminClient.indices().prepareAliases().addAlias(indexName, aliasName).execute().actionGet().acknowledged();
