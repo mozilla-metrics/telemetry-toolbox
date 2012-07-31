@@ -21,12 +21,14 @@ package com.mozilla.telemetry.pig.eval.json;
 
 import java.io.EOFException;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.log4j.Logger;
 import org.apache.pig.EvalFunc;
 import org.apache.pig.data.Tuple;
 import org.codehaus.jackson.JsonParseException;
@@ -34,7 +36,11 @@ import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.type.TypeReference;
 
+import com.mozilla.util.Pair;
+
 public class AddonPrivacyCorrection extends EvalFunc<String> {
+    
+    private static final Logger LOG = Logger.getLogger(AddonPrivacyCorrection.class);
     
     public static enum ERRORS {
         JSONParseError, JSONMappingError, EOFError, GenericError
@@ -44,11 +50,40 @@ public class AddonPrivacyCorrection extends EvalFunc<String> {
     private static final String OTHER_THREADS = "otherThreads";
     
     private final ObjectMapper jsonMapper;
-    private final Pattern sqlLikePattern;
+    private final List<Pattern> patterns;
     
     public AddonPrivacyCorrection() {
         jsonMapper = new ObjectMapper();
-        sqlLikePattern = Pattern.compile("WHERE\\s+([a-zA-Z0-9_]+)\\s+LIKE\\s+('[^']+')");
+        patterns = new ArrayList<Pattern>();
+        Pattern sqlLikePattern = Pattern.compile("([a-zA-Z0-9_]+)\\s+LIKE\\s+('[^']+')", Pattern.CASE_INSENSITIVE);
+        patterns.add(sqlLikePattern);
+        Pattern sqlEqualPattern = Pattern.compile("([a-zA-Z0-9_]+)\\s*=\\s*('[^']+')", Pattern.CASE_INSENSITIVE);
+        patterns.add(sqlEqualPattern);
+        // Doing NOT IN separately here since I couldn't come up with a way to keep everything in groups 1 and 2
+        // when trying to include it in the pattern above. Could obviously go one step more flexible and allow specifying group 
+        // numbers for each capture we are after per regex, or see if Java supports named capture groups.
+        Pattern sqlNotInPattern = Pattern.compile("([a-zA-Z0-9_]+)\\s+NOT\\s+IN\\s*\\((('[^']+',*)+)\\)", Pattern.CASE_INSENSITIVE);
+        patterns.add(sqlNotInPattern);
+        Pattern sqlInPattern = Pattern.compile("([a-zA-Z0-9_]+)\\s+IN\\s*\\((('[^']+',*)+)\\)", Pattern.CASE_INSENSITIVE);
+        patterns.add(sqlInPattern);
+    }
+    
+    private Pair<Boolean,String> process(String input) {
+        Pair<Boolean,String> result = new Pair<Boolean,String>(false, input);
+        for (Pattern p : patterns) {
+            Matcher m = p.matcher(result.getSecond());
+            if (m.find()) {
+                String predicate = m.group(2);
+                if (!predicate.startsWith("'moz_")) {
+                    result.setFirst(true);
+                    result.setSecond(result.getSecond().replaceAll(Pattern.quote(m.group(2)), ":" + m.group(1)));
+                    LOG.info("Original: " + input);
+                    LOG.info("Modified: " + result.getSecond());
+                }
+            }
+        }
+        
+        return result;
     }
     
     @SuppressWarnings("unchecked")
@@ -70,21 +105,18 @@ public class AddonPrivacyCorrection extends EvalFunc<String> {
                         Map<String,Object> otherThreadsMap = (Map<String, Object>)slowSQLMap.get(OTHER_THREADS);
                         Map<String,Object> newOtherThreadsMap = new HashMap<String,Object>();
                         for (Map.Entry<String, Object> otherThread : otherThreadsMap.entrySet()) {
-                            Matcher m = sqlLikePattern.matcher(otherThread.getKey());
-                            if (m.find()) {
-                                String col = m.group(1);
-                                String pred = m.group(2);
-                                String newKey = otherThread.getKey().replaceAll(Pattern.quote(pred), ":" + col);
-                                if (newOtherThreadsMap.containsKey(newKey)) {
-                                    List<Object> existingList =  (List<Object>)newOtherThreadsMap.get(newKey);
+                            Pair<Boolean,String> result = process(otherThread.getKey());
+                            if (result.getFirst()) {
+                                modified = true; 
+                                if (newOtherThreadsMap.containsKey(result.getSecond())) {
+                                    List<Object> existingList =  (List<Object>)newOtherThreadsMap.get(result.getSecond());
                                     List<Object> valList = (List<Object>)otherThread.getValue();
                                     valList.set(0, ((Number)existingList.get(0)).intValue() + ((Number)valList.get(0)).intValue());
                                     valList.set(1, ((Number)existingList.get(1)).intValue() + ((Number)valList.get(1)).intValue());
-                                    newOtherThreadsMap.put(newKey, valList);
+                                    newOtherThreadsMap.put(result.getSecond(), valList);
                                 } else {
-                                    newOtherThreadsMap.put(newKey, otherThread.getValue());
+                                    newOtherThreadsMap.put(result.getSecond(), otherThread.getValue());
                                 }
-                                modified = true;
                             } else {
                                 // keep calm and carry on
                                 newOtherThreadsMap.put(otherThread.getKey(), otherThread.getValue());
