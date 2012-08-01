@@ -57,6 +57,8 @@ public class AddonPrivacyCorrection extends EvalFunc<String> {
         patterns = new ArrayList<Pattern>();
         Pattern sqlLikePattern = Pattern.compile("([a-zA-Z0-9_]+)\\s+LIKE\\s+('[^']+')", Pattern.CASE_INSENSITIVE);
         patterns.add(sqlLikePattern);
+        Pattern sqlGlobPattern = Pattern.compile("([a-zA-Z0-9_]+)\\s+GLOB\\s+('[^']+')", Pattern.CASE_INSENSITIVE);
+        patterns.add(sqlGlobPattern);
         Pattern sqlEqualPattern = Pattern.compile("([a-zA-Z0-9_]+)\\s*=\\s*('[^']+')", Pattern.CASE_INSENSITIVE);
         patterns.add(sqlEqualPattern);
         // Doing NOT IN separately here since I couldn't come up with a way to keep everything in groups 1 and 2
@@ -72,12 +74,12 @@ public class AddonPrivacyCorrection extends EvalFunc<String> {
         Pair<Boolean,String> result = new Pair<Boolean,String>(false, input);
         for (Pattern p : patterns) {
             Matcher m = p.matcher(result.getSecond());
-            if (m.find()) {
+            while (m.find()) {
                 String predicate = m.group(2);
-                if (!predicate.startsWith("'moz_")) {
-                    result.setFirst(true);
-                    result.setSecond(result.getSecond().replaceAll(Pattern.quote(m.group(2)), ":" + m.group(1)));
+                if (!predicate.startsWith("'moz_places")) {
                     LOG.info("Original: " + input);
+                    result.setFirst(true);
+                    result.setSecond(result.getSecond().replaceAll(Pattern.quote(predicate), ":" + m.group(1)));
                     LOG.info("Modified: " + result.getSecond());
                 }
             }
