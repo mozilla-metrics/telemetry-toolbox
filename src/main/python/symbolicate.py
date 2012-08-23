@@ -12,6 +12,7 @@ import sys
 import urllib2
 import codecs
 import re
+import gzip
 
 help_message = '''
     Takes chrome hangs list of memory addresses from JSON dumps and converts them to stack traces
@@ -62,25 +63,26 @@ def symbolicate(chromeHangsObj):
 
 def process(input_file, output_file):
     fin = open(input_file, "r")
-    fout = open(output_file, "w")
+    fout = gzip.open(output_file, "wb")
     for line in fin:
         splits = line.split("\t");
-        json_dict = json.loads(splits[1])
-        if len(json_dict["chromeHangs"]) > 0:
-            print "len(chromeHangs) = %d" % (len(json_dict["chromeHangs"]))
-            symbol_stacks = symbolicate(json_dict["chromeHangs"])
-            for stack in symbol_stacks:
-                fout.write(line)
-                fout.write("-" * 40)
-                fout.write(" BEGIN SYMBOL STACK ")
-                fout.write("-" * 40)
-                fout.write("\n")
-                fout.write("\n".join(stack))
-                fout.write("\n")
-                fout.write("-" * 40)
-                fout.write(" END SYMBOL STACK ")
-                fout.write("-" * 40)
-                fout.write("\n")
+        try:
+            json_dict = json.loads(splits[1])
+            if len(json_dict["chromeHangs"]) > 0:
+                print "len(chromeHangs) = %d" % (len(json_dict["chromeHangs"]))
+                symbol_stacks = symbolicate(json_dict["chromeHangs"])
+                del json_dict["chromeHangs"]
+                del json_dict["histograms"]
+                if symbol_stacks:
+                    for stack in symbol_stacks:
+                        fout.write(splits[0].rstrip())
+                        fout.write("\t")
+                        fout.write(json.dumps(json_dict))
+                        fout.write("\n----- BEGIN SYMBOL STACK -----\n")
+                        fout.write("\n".join(stack))
+                        fout.write("\n----- END SYMBOL STACK -----\n")
+        except Exception as e:
+            sys.stderr.write("Exception while processing json item: " + str(e) + "\n")
     fin.close()
     fout.close()  
 

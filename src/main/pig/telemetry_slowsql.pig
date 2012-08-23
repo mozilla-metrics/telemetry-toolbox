@@ -3,7 +3,7 @@ register 'telemetry-toolbox-0.2-SNAPSHOT.jar'
 register 'datafu-0.0.4.jar'
 
 SET pig.logfile telemetry-slowsql.log;
-SET default_parallel 8;
+SET default_parallel 53;
 SET pig.tmpfilecompression true;
 SET pig.tmpfilecompression.codec lzo;
 SET mapred.compress.map.output true;
@@ -36,7 +36,8 @@ slowsql_main = FOREACH grouped_main {
              SUM(sorted_main.count) AS sum_count,
              Quantile(sorted_main.avg_time);
 }
-ordered_main = ORDER slowsql_main BY doc_count DESC,sum_count DESC;
+fltrd_slowsql_main = FILTER slowsql_main BY doc_count > 100;
+ordered_main = ORDER fltrd_slowsql_main BY doc_count DESC,sum_count DESC;
 
 filtered_other = FILTER genmap BY json_map#'slowSQL'#'otherThreads' IS NOT NULL;
 otherthreads = FOREACH filtered_other GENERATE SUBSTRING(k,1,9) AS d:chararray,
@@ -53,7 +54,8 @@ slowsql_other = FOREACH grouped_other {
              SUM(sorted_other.count) AS sum_count,
              Quantile(sorted_other.avg_time);
 }
-ordered_other = ORDER slowsql_other BY doc_count DESC,sum_count DESC;
+fltrd_slowsql_other = FILTER slowsql_other BY doc_count > 100;
+ordered_other = ORDER fltrd_slowsql_other BY doc_count DESC,sum_count DESC;
 
 STORE ordered_main INTO 'slowsql-main-$start_date-$end_date' USING PigStorage('\u0001');
 STORE ordered_other INTO 'slowsql-other-$start_date-$end_date' USING PigStorage('\u0001');

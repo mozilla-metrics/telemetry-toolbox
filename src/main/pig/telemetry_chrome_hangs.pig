@@ -10,6 +10,7 @@ raw = LOAD 'hbase://telemetry' USING com.mozilla.pig.load.HBaseMultiScanLoader('
 genmap = FOREACH raw GENERATE k,json,com.mozilla.pig.eval.json.JsonMap(json) AS json_map:map[];
 filtered_genmap = FILTER genmap BY json_map#'chromeHangs' IS NOT NULL AND 
                                    com.mozilla.pig.eval.Size(json_map#'chromeHangs') > 0 AND
-                                   json_map#'info'#'appUpdateChannel' == 'nightly-profiling';
+                                   json_map#'info'#'appUpdateChannel' == 'nightly' AND
+                                   json_map#'info'#'OS' == 'WINNT';
 orig_data = FOREACH filtered_genmap GENERATE k,json;
 STORE orig_data INTO 'chrome-hangs-$start_date-$end_date';

@@ -5,7 +5,7 @@ register 'wonderdog-1.0-SNAPSHOT.jar'
 register 'elasticsearch/lib/0.19.3/*.jar'
 
 SET pig.logfile telemetry-aggregates.log;
-SET default_parallel 16;
+SET default_parallel 53;
 SET pig.tmpfilecompression true;
 SET pig.tmpfilecompression.codec lzo;
 SET mapred.compress.map.output true;
@@ -27,6 +27,7 @@ filtered_genmap = FILTER genmap BY IsMap(json_map#'info') AND
                                    IsMap(json_map#'histograms') AND
                                    IsMap(json_map#'simpleMeasurements') AND
                                    (json_map#'info'#'appName' == 'Firefox' OR 
+                                    json_map#'info'#'appName' == 'MetroFirefox' OR
                                     json_map#'info'#'appName' == 'Thunderbird' OR 
                                     json_map#'info'#'appName' == 'Fennec') AND
                                    (json_map#'info'#'reason' == 'idle-daily' OR json_map#'info'#'reason' == 'saved-session');
