@@ -2,7 +2,7 @@ register 'akela-0.3-SNAPSHOT.jar'
 register 'telemetry-toolbox-0.2-SNAPSHOT.jar'
 register 'datafu-0.0.4.jar'
 
-SET pig.logfile telemetry-slowsql.log;
+SET pig.logfile telemetry_slowsql.log;
 SET default_parallel 53;
 SET pig.tmpfilecompression true;
 SET pig.tmpfilecompression.codec lzo;

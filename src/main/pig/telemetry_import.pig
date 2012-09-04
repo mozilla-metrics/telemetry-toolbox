@@ -2,7 +2,7 @@ register 'akela-0.4-SNAPSHOT.jar'
 register 'telemetry-toolbox-0.2-SNAPSHOT.jar'
 register 'elephant-bird-2.2.0.jar'
 
-SET pig.logfile telemetry-import.log;
+SET pig.logfile telemetry_import.log;
 SET pig.tmpfilecompression true;
 SET pig.tmpfilecompression.codec lzo;
 SET mapred.compress.map.output true;
