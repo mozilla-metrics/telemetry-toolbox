@@ -35,7 +35,7 @@ public class AggregateJson extends EvalFunc<String> {
     public static enum STATS { INVALID_ROW_SIZE };
     
     // tuple field indices
-    private static final int VALID_ROW_SIZE = 18;
+    private static final int VALID_ROW_SIZE = 19;
     private static final int DATE_IDX = 0;
     private static final int REASON_IDX = 1;
     private static final int PRODUCT_IDX = 2;
@@ -53,7 +53,8 @@ public class AggregateJson extends EvalFunc<String> {
     private static final int MAX_RANGE_IDX = 14;
     private static final int HIST_TYPE_IDX = 15;
     private static final int VALUE_SUM_COUNT_IDX = 16;
-    private static final int HIST_NAME_DOC_COUNT_IDX = 17;
+    private static final int HIST_NAME_SUM_IDX = 17;
+    private static final int HIST_NAME_DOC_COUNT_IDX = 18;
     
     private static final ObjectMapper jsonMapper = new ObjectMapper();
     
@@ -86,6 +87,7 @@ public class AggregateJson extends EvalFunc<String> {
             }
             String histName = (String)t.get(HIST_NAME_IDX);
             tda.addOrPutHistogramValue(histName, String.valueOf(t.get(HIST_VALUE_IDX)), ((Number)t.get(VALUE_SUM_COUNT_IDX)).longValue());
+            tda.setHistogramSum(histName, ((Number)t.get(HIST_NAME_SUM_IDX)).longValue());
             tda.setHistogramCount(histName, ((Number)t.get(HIST_NAME_DOC_COUNT_IDX)).intValue());
             tda.setHistogramBucketCount(histName, ((Number)t.get(BUCKET_COUNT_IDX)).intValue());
             tda.setHistogramRange(histName, ((Number)t.get(MIN_RANGE_IDX)).longValue(), ((Number)t.get(MAX_RANGE_IDX)).longValue());

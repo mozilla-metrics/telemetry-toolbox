@@ -232,7 +232,6 @@ public class TelemetryDataAggregate {
         if (!"".equals(histValueKey.trim())) {
             long hvk = Long.parseLong(histValueKey);
             hist.addValue(new long[] { hvk, histCount });
-            hist.setSum(hist.getSum() + (hvk * histCount));
             histograms.put(key, hist);
             histogramNames.add(key);
         }

@@ -1,5 +1,5 @@
 /* Aggregate all telemetry data for a given day and index the aggregate json objects in ElasticSearch */
-register 'akela-0.3-SNAPSHOT.jar'
+register 'akela-0.4-SNAPSHOT.jar'
 register 'telemetry-toolbox-0.2-SNAPSHOT.jar'
 register 'wonderdog-1.0-SNAPSHOT.jar'
 register 'elasticsearch/lib/0.19.3/*.jar'
@@ -11,8 +11,8 @@ SET pig.tmpfilecompression.codec lzo;
 SET mapred.compress.map.output true;
 SET mapred.map.output.compression.codec org.apache.hadoop.io.compress.SnappyCodec;
 
+define HistogramTuples com.mozilla.telemetry.pig.eval.HistogramTuples();
 define HistogramValueTuples com.mozilla.telemetry.pig.eval.HistogramValueTuples();
-define HistogramNames com.mozilla.telemetry.pig.eval.HistogramNames();
 define ConvertNull com.mozilla.pig.eval.ConvertNull('NA');
 define OsVersionNormalizer com.mozilla.pig.eval.regex.FindOrReturn('^[0-9](\\.*[0-9]*){1}');
 define IsMap com.mozilla.pig.filter.map.IsMap();
@@ -21,7 +21,7 @@ define AggregateJson com.mozilla.telemetry.pig.eval.json.AggregateJson();
 %default es_tasks 4
 %default es_size 100
 
-raw = LOAD 'hbase://telemetry' USING com.mozilla.pig.load.HBaseMultiScanLoader('$start_date', '$end_date', 'yyyyMMdd', 'data:json') AS (k:chararray, json:chararray);
+raw = LOAD 'hbase://telemetry' USING com.mozilla.pig.load.HBaseMultiScanLoader('$start_date', '$end_date', 'yyyyMMdd', 'data:json') AS (k:bytearray, json:chararray);
 genmap = FOREACH raw GENERATE k,com.mozilla.pig.eval.json.JsonMap(json) AS json_map:map[];
 filtered_genmap = FILTER genmap BY IsMap(json_map#'info') AND 
                                    IsMap(json_map#'histograms') AND
@@ -33,7 +33,7 @@ filtered_genmap = FILTER genmap BY IsMap(json_map#'info') AND
                                    (json_map#'info'#'reason' == 'idle-daily' OR json_map#'info'#'reason' == 'saved-session');
 
 /* Create a dataset for generating histogram name level counts */
-hist_names = FOREACH filtered_genmap GENERATE SUBSTRING(k,1,9) AS d:chararray,
+hist_tuples = FOREACH filtered_genmap GENERATE SUBSTRING((chararray)k,1,9) AS d:chararray,
                                               (chararray)json_map#'info'#'reason' AS reason:chararray,
                                               (chararray)json_map#'info'#'appName' AS product:chararray,
                                               (chararray)json_map#'info'#'appVersion' AS product_version:chararray,
@@ -43,13 +43,17 @@ hist_names = FOREACH filtered_genmap GENERATE SUBSTRING(k,1,9) AS d:chararray,
                                               OsVersionNormalizer((chararray)json_map#'info'#'version') AS os_version:chararray,
                                               (chararray)json_map#'info'#'appBuildID' AS app_build_id:chararray,
                                               (chararray)json_map#'info'#'platformBuildID' AS plat_build_id:chararray,
-                                              FLATTEN(HistogramNames(json_map#'histograms', json_map#'simpleMeasurements')) AS hist_name:chararray;
-
+                                              FLATTEN(HistogramTuples(json_map#'histograms', json_map#'simpleMeasurements')) AS (hist_name:chararray, sum:long, bucket_count:int, min_range:int, max_range:int, hist_type:int);
+hist_names = FOREACH hist_tuples GENERATE d, reason, product, product_version, product_channel,
+                                          arch, os, os_version, app_build_id, plat_build_id, hist_name, 
+                                          sum;
 hist_by_name = GROUP hist_names BY (d,reason,product,product_version,product_channel,arch,os,os_version,app_build_id,plat_build_id,hist_name);
-hist_name_counts = FOREACH hist_by_name GENERATE FLATTEN(group), COUNT(hist_names) AS doc_count:long;
+hist_name_counts = FOREACH hist_by_name GENERATE FLATTEN(group), 
+                                                 SUM(hist_names.sum) AS sum_sum:long, 
+                                                 COUNT(hist_names) AS doc_count:long;
 
 /* Create a dataset for generating histogram name and value counts */
-hist_values = FOREACH filtered_genmap GENERATE SUBSTRING(k,1,9) AS d:chararray, 
+hist_values = FOREACH filtered_genmap GENERATE SUBSTRING((chararray)k,1,9) AS d:chararray, 
                                                (chararray)json_map#'info'#'reason' AS reason:chararray,
                                                (chararray)json_map#'info'#'appName' AS product:chararray,
                                                (chararray)json_map#'info'#'appVersion' AS product_version:chararray,
@@ -72,14 +76,16 @@ hist_sums = FOREACH hist_by_name_and_v GENERATE FLATTEN(group),
    here the name to name,value is a one to many relationship */
 cogrpd = COGROUP hist_name_counts BY (d,reason,product,product_version,product_channel,arch,os,os_version,app_build_id,plat_build_id,hist_name),
                  hist_sums BY (d,reason,product,product_version,product_channel,arch,os,os_version,app_build_id,plat_build_id,hist_name);
-flat = FOREACH cogrpd GENERATE FLATTEN(hist_sums), FLATTEN(hist_name_counts.doc_count) AS hist_name_doc_count;
+flat = FOREACH cogrpd GENERATE FLATTEN(hist_sums), 
+                               FLATTEN(hist_name_counts.sum_sum) AS hist_name_sum:long, 
+                               FLATTEN(hist_name_counts.doc_count) AS hist_name_doc_count:long;
 
 /* Regroup and generate aggregate JSON objects */
 grpd = GROUP flat BY (d,reason,product,product_version,product_channel,arch,os,os_version,app_build_id,plat_build_id);
 agg_jsons = FOREACH grpd GENERATE AggregateJson(group, flat) AS agg_json:chararray;
 
 /* Store JSON objects into HDFS (mainly for testing or verification) */
-/* STORE agg_jsons INTO 'telemetry-aggregates-json-$start_date-$end_date'; */
+/*STORE agg_jsons INTO 'telemetry-aggregates-json-$start_date-$end_date';*/
 
 /* Store JSON objects into ElasticSearch with Wonderdog */
 STORE agg_jsons INTO 'es://$index_name/data?json=true&alias=telemetry&size=$es_size&tasks=$es_tasks' 
