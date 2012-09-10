@@ -4,7 +4,7 @@ register 'telemetry-toolbox-0.2-SNAPSHOT.jar'
 register 'wonderdog-1.0-SNAPSHOT.jar'
 register 'elasticsearch/lib/0.19.3/*.jar'
 
-SET pig.logfile telemetry-aggregates.log;
+SET pig.logfile telemetry_aggregates.log;
 SET default_parallel 53;
 SET pig.tmpfilecompression true;
 SET pig.tmpfilecompression.codec lzo;
