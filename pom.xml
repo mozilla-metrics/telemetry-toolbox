@@ -78,6 +78,13 @@
 			<artifactId>jackson-mapper-asl</artifactId>
 			<version>1.9.7</version>
 		</dependency>
+		<dependency>
+			<groupId>com.twitter</groupId>
+			<artifactId>elephant-bird</artifactId>
+			<version>2.2.0</version>
+                        <scope>system</scope>
+                        <systemPath>${basedir}/lib/elephant-bird-2.2.0.jar</systemPath>
+		</dependency>
 		<!-- Cloudera Hadoop, HBase -->
 		<dependency>
 			<groupId>org.apache.hadoop</groupId>
@@ -170,7 +177,7 @@
 		<dependency>
 			<groupId>org.apache.pig</groupId>
 			<artifactId>pig</artifactId>
-			<version>0.8.1-cdh3u4</version>
+                        <version>0.9.2</version>
 			<scope>provided</scope>
 			<exclusions>
 				<exclusion>
@@ -199,6 +206,12 @@
 				</exclusion>
 			</exclusions>
 		</dependency>
+                <!-- GSON -->
+               <dependency>
+                   <groupId>com.google.code.gson</groupId>
+                   <artifactId>gson</artifactId>
+                   <version>2.2.2</version>
+               </dependency>
 		<!-- ElasticSearch -->
 		<dependency>
 			<groupId>org.elasticsearch</groupId>
