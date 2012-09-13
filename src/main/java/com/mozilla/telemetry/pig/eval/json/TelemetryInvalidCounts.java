@@ -20,65 +20,31 @@
 
 package com.mozilla.telemetry.pig.eval.json;
 
-import java.io.BufferedReader;
-import java.io.DataInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.text.DecimalFormat;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.LinkedList;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.NavigableMap;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.TreeSet;
 import java.util.Map.Entry;
-import java.util.regex.Pattern;
 import java.util.Iterator;
 
 import java.io.IOException;
 
 
 import org.apache.pig.EvalFunc;
-import org.apache.pig.data.DataBag;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 import org.apache.pig.data.DataByteArray;
 import org.apache.pig.impl.util.UDFContext;
 //import org.apache.pig.tools.counters.PigCounterHelper;
 
-import org.apache.commons.lang.StringEscapeUtils;
-import org.apache.commons.lang.StringUtils;
-
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.Reducer;
-import org.apache.hadoop.mapreduce.Mapper.Context;
-import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-import org.apache.hadoop.util.GenericOptionsParser;
-import org.apache.hadoop.util.Tool;
-import org.apache.hadoop.util.ToolRunner;
+import org.apache.commons.lang.StringUtils;
+
 import org.apache.log4j.Logger;
 
 import org.codehaus.jackson.map.ObjectMapper;
@@ -96,16 +62,17 @@ import com.twitter.elephantbird.pig.util.PigCounterHelper;
 import com.mozilla.telemetry.constants.TelemetryConstants;
 
 public class TelemetryInvalidCounts extends EvalFunc<Tuple> {
-
-    private static Set<String> whiteListDllSet = new HashSet<String>();
     static Map <String, Map<String,Object>> referenceValues = null;
-    private Set<String> whiteListDll = new HashSet<String>();
     public final String referenceJsonFilename;
     private static final Logger LOG = Logger.getLogger(TelemetryInvalidCounts.class);
     private PigCounterHelper pigCounterHelper = new PigCounterHelper();
     private TupleFactory tupleFactory = TupleFactory.getInstance();
     
-    public enum ReportStats {VALID_HISTOGRAM,INVALID_HISTOGRAM, INVALID_JSON_STRUCTURE,INVALID_SUBMISSIONS,KNOWN_HISTOGRAMS,UNKNOWN_HISTOGRAMS, META_DATA_INVALID, UNDEFINED_HISTOGRAMS, MISSING_JSON_REFERENCE, SUBMISSIONS_EVALUATED, SUBMISSIONS_SKIPPED, MISSING_JSON_VALUES_FIELD,JSON_INVALID_VALUES_FIELD,INVALID_HISTOGRAM_BUCKET_VALUE,INVALID_HISTOGRAM_BUCKET_COUNT,INVALID_HISTOGRAM_MAX,INVALID_HISTOGRAM_MIN,INVALID_HISTOGRAM_TYPE,NO_HISTOGRAM_BUCKET_VALUES};
+    public enum ReportStats {VALID_HISTOGRAM,INVALID_HISTOGRAM, INVALID_JSON_STRUCTURE,INVALID_SUBMISSIONS,KNOWN_HISTOGRAMS,
+                             UNKNOWN_HISTOGRAMS, META_DATA_INVALID, UNDEFINED_HISTOGRAMS, MISSING_JSON_REFERENCE,
+                             SUBMISSIONS_EVALUATED, SUBMISSIONS_SKIPPED, MISSING_JSON_VALUES_FIELD,JSON_INVALID_VALUES_FIELD,
+                             INVALID_HISTOGRAM_BUCKET_VALUE,INVALID_HISTOGRAM_BUCKET_COUNT,INVALID_HISTOGRAM_MAX,
+                             INVALID_HISTOGRAM_MIN,INVALID_HISTOGRAM_TYPE,NO_HISTOGRAM_BUCKET_VALUES};
     
     public TelemetryInvalidCounts(String filename) {
         referenceJsonFilename = filename;
@@ -141,7 +108,7 @@ public class TelemetryInvalidCounts extends EvalFunc<Tuple> {
         return null;
     }
 
-    
+    @SuppressWarnings("unchecked")
     public static void readReferenceJson(String filename) {
         try {
             FileSystem fs = FileSystem.get(UDFContext.getUDFContext().getJobConf());
@@ -189,7 +156,7 @@ public class TelemetryInvalidCounts extends EvalFunc<Tuple> {
         }
     }
 
-    
+    @SuppressWarnings("unchecked")
     public boolean checkVersion(Map<String, Object>  crash) {
         boolean appVersionMatch = false;
         LinkedHashMap<String, Object> infoValue = (LinkedHashMap<String, Object>) crash.get(TelemetryConstants.INFO);
@@ -202,7 +169,7 @@ public class TelemetryInvalidCounts extends EvalFunc<Tuple> {
         return  appVersionMatch;
     }
 
-    
+    @SuppressWarnings("unchecked")
     public String validateTelemetryJson(String json) {
         String jsonValue = new String(json);
         ObjectMapper jsonMapper = new ObjectMapper();
@@ -339,6 +306,7 @@ public class TelemetryInvalidCounts extends EvalFunc<Tuple> {
         return null;
     }
 
+    @SuppressWarnings("unchecked")
     void dump_histogram_values(String key,Map<String,Object> referenceHistograms) {
         LOG.info(key);
         for(Map.Entry<String,Object> k : referenceHistograms.entrySet()) {
