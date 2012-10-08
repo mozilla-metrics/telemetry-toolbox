@@ -30,19 +30,21 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Iterator;
-
+import java.io.BufferedReader;
+import java.io.FileReader;
 import java.io.IOException;
 
 
 import org.apache.pig.EvalFunc;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
-import org.apache.pig.data.DataByteArray;
 import org.apache.pig.impl.util.UDFContext;
+
 //import org.apache.pig.tools.counters.PigCounterHelper;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.commons.lang.StringUtils;
 
 import org.apache.log4j.Logger;
@@ -62,37 +64,35 @@ import com.twitter.elephantbird.pig.util.PigCounterHelper;
 import com.mozilla.telemetry.constants.TelemetryConstants;
 
 public class TelemetryInvalidCounts extends EvalFunc<Tuple> {
-    static Map <String, Map<String,Object>> referenceValues = null;
-    public final String referenceJsonFilename;
-    private static final Logger LOG = Logger.getLogger(TelemetryInvalidCounts.class);
-    private PigCounterHelper pigCounterHelper = new PigCounterHelper();
-    private TupleFactory tupleFactory = TupleFactory.getInstance();
-    
-    public enum ReportStats {VALID_HISTOGRAM,INVALID_HISTOGRAM, INVALID_JSON_STRUCTURE,INVALID_SUBMISSIONS,KNOWN_HISTOGRAMS,
+    static Map <String, Object> specValues = null;
+    final String lookupFileName;
+    static final Logger LOG = Logger.getLogger(TelemetryInvalidCounts.class);
+    PigCounterHelper pigCounterHelper = new PigCounterHelper();
+    TupleFactory tupleFactory = TupleFactory.getInstance();
+    enum ReportStats {VALID_HISTOGRAM,INVALID_HISTOGRAM, INVALID_JSON_STRUCTURE,INVALID_SUBMISSIONS,KNOWN_HISTOGRAMS,
                              UNKNOWN_HISTOGRAMS, META_DATA_INVALID, UNDEFINED_HISTOGRAMS, MISSING_JSON_REFERENCE,
                              SUBMISSIONS_EVALUATED, SUBMISSIONS_SKIPPED, MISSING_JSON_VALUES_FIELD,JSON_INVALID_VALUES_FIELD,
                              INVALID_HISTOGRAM_BUCKET_VALUE,INVALID_HISTOGRAM_BUCKET_COUNT,INVALID_HISTOGRAM_MAX,
                              INVALID_HISTOGRAM_MIN,INVALID_HISTOGRAM_TYPE,NO_HISTOGRAM_BUCKET_VALUES};
     
     public TelemetryInvalidCounts(String filename) {
-        referenceJsonFilename = filename;
+        lookupFileName = filename;
     }
 
     @Override
     public List<String> getCacheFiles() {
         List<String> cacheFiles = new ArrayList<String>(1);
-        cacheFiles.add(referenceJsonFilename + "#" + referenceJsonFilename);
+        cacheFiles.add(lookupFileName + "#" + lookupFileName);
         return cacheFiles;
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public Tuple exec(Tuple input) throws IOException {
-        if(referenceValues == null) {
-            readReferenceJson(referenceJsonFilename);
+        if(specValues == null) {
+            readLookupFile(lookupFileName);
         }
-        //String key = (String)input.get(0);
-        DataByteArray key = (DataByteArray)input.get(0);
+        String key = (String)input.get(0);
         String json = (String)input.get(1);
         if(json == null) {
             pigCounterHelper.incrCounter(ReportStats.META_DATA_INVALID,1L);
@@ -108,11 +108,31 @@ public class TelemetryInvalidCounts extends EvalFunc<Tuple> {
         return null;
     }
 
-    @SuppressWarnings("unchecked")
-    public static void readReferenceJson(String filename) {
+    public void readLookupFile(String filename) {
         try {
             FileSystem fs = FileSystem.get(UDFContext.getUDFContext().getJobConf());
-            referenceValues = new HashMap<String, Map<String,Object>>();
+            FSDataInputStream fi = fs.open(new Path(filename));
+            BufferedReader in = new BufferedReader(new InputStreamReader(fi));
+            String line;
+            specValues = new HashMap<String,Object>();
+            while ((line = in.readLine()) != null) {
+                String[] toks = new String[2];
+                toks = line.split(":", 2);
+                if(toks.length == 2) {
+                    Map<String, Map<String,Object>> referenceJson = readReferenceJson(toks[1]);
+                    specValues.put(toks[0],referenceJson);
+                }
+            }
+            in.close();
+        } catch(Exception e) {
+        }
+    }
+    
+    @SuppressWarnings("unchecked")
+    public Map<String, Map<String,Object>>  readReferenceJson(String filename) {
+        try {
+            FileSystem fs = FileSystem.get(UDFContext.getUDFContext().getJobConf());
+            Map<String, Map<String,Object>> referenceValues = new HashMap<String, Map<String,Object>>();
             ObjectMapper jsonMapper = new ObjectMapper();
             Map<String, Object> crash = new LinkedHashMap<String, Object>();
             crash = jsonMapper.readValue(fs.open(new Path(filename)), new TypeReference<Map<String,Object>>() { });
@@ -150,25 +170,45 @@ public class TelemetryInvalidCounts extends EvalFunc<Tuple> {
                 }
                 referenceValues.put(jKey, compKey);
             }
+            return referenceValues;
 
         } catch (IOException e) {
             LOG.info(e.getMessage());
         }
+        return null;
     }
 
     @SuppressWarnings("unchecked")
-    public boolean checkVersion(Map<String, Object>  crash) {
-        boolean appVersionMatch = false;
+    public String getAppVersionFromTelemetryDoc(Map<String,Object> crash) {
+        String appVersion = null;
         LinkedHashMap<String, Object> infoValue = (LinkedHashMap<String, Object>) crash.get(TelemetryConstants.INFO);
         for(Map.Entry<String, Object> e1 : infoValue.entrySet()) {
-            if (e1.getKey().equals(TelemetryConstants.APP_VERSION) &&
-                e1.getValue().toString().contains(TelemetryConstants.FIREFOX_VERSION)) {
+            if (e1.getKey().equals(TelemetryConstants.APP_VERSION)) 
+                appVersion = e1.getValue().toString();
+        }
+        return appVersion;
+    }
+    
+    @SuppressWarnings("unchecked")
+    public boolean checkVersion(String appVersion) {
+        boolean appVersionMatch = false;
+        for(Map.Entry<String, Object> entry : specValues.entrySet()) {
+            if (appVersion.contains(entry.getKey()))
                 appVersionMatch = true;
-            }
         }
         return  appVersionMatch;
     }
 
+    @SuppressWarnings("unchecked")
+    public Map<String, Map<String,Object>> getJsonSpec(String appVersion) {
+        for(Map.Entry<String, Object> entry : specValues.entrySet()) {
+            if (appVersion.contains(entry.getKey())) {
+                return (Map<String, Map<String,Object>>) specValues.get(entry.getKey());
+            }
+        }
+        return null;
+    }
+    
     @SuppressWarnings("unchecked")
     public String validateTelemetryJson(String json) {
         String jsonValue = new String(json);
@@ -176,13 +216,14 @@ public class TelemetryInvalidCounts extends EvalFunc<Tuple> {
         Map<String, Object> crash = new LinkedHashMap<String, Object>();
         Map<String, Object> newJson = new LinkedHashMap<String, Object>();
         Map<String, Object> finalJson = new LinkedHashMap<String, Object>();
-
         try {
             crash = jsonMapper.readValue(jsonValue, new TypeReference<Map<String,Object>>() { });
-            boolean appVersionMatch = checkVersion(crash);
+            String appVersion = getAppVersionFromTelemetryDoc(crash);
+            boolean appVersionMatch = checkVersion(appVersion);
             finalJson.put(TelemetryConstants.VER, crash.get(TelemetryConstants.VER));
             finalJson.put(TelemetryConstants.INFO, crash.get(TelemetryConstants.INFO));
             if (appVersionMatch) {
+                Map<String, Map<String,Object>> referenceValues = getJsonSpec(appVersion);
                 pigCounterHelper.incrCounter(ReportStats.SUBMISSIONS_EVALUATED,1L);
                 finalJson.put(TelemetryConstants.SIMPLE_MESAUREMENTS, crash.get(TelemetryConstants.SIMPLE_MESAUREMENTS));
                 Map<String, Object> intermediateJson = new LinkedHashMap<String, Object>();
@@ -214,7 +255,7 @@ public class TelemetryInvalidCounts extends EvalFunc<Tuple> {
                         }
                     }
                         
-
+                    
                     if (referenceValues.containsKey(jKey)) {
                         pigCounterHelper.incrCounter(ReportStats.KNOWN_HISTOGRAMS,1L);
                         Map<String,Object> referenceHistograms = referenceValues.get(jKey);
@@ -272,6 +313,7 @@ public class TelemetryInvalidCounts extends EvalFunc<Tuple> {
                         }
                         
                     } else {
+                        //LOG.info("UNKNOWN_HISTOGRAM "+jKey);
                         pigCounterHelper.incrCounter(ReportStats.UNKNOWN_HISTOGRAMS,1L);
                         newJson = new LinkedHashMap<String, Object>();
                         for(Map.Entry<String, Object> e1 : d1.entrySet()) {
