@@ -27,8 +27,18 @@ SYMBOL_SERVER_URL = "http://symbolapi.mozilla.org:80/"
 
 # Pulled this method from Vladan's code
 def symbolicate(chromeHangsObj):
+    if isinstance(chromeHangsObj, list):
+        version = 1
+        requestObj = chromeHangsObj
+        numStacks = len(chromeHangsObj)
+    else:
+        version = 2
+        numStacks = len(chromeHangsObj["stacks"])
+        requestObj = {"stacks"    : chromeHangsObj["stacks"],
+                      "memoryMap" : chromeHangsObj["memoryMap"],
+                      "version"   : 2}
     try:
-        requestJson = json.dumps(chromeHangsObj)
+        requestJson = json.dumps(requestObj)
         headers = { "Content-Type": "application/json" }
         requestHandle = urllib2.Request(SYMBOL_SERVER_URL, requestJson, headers)
         response = urllib2.urlopen(requestHandle)
@@ -44,16 +54,20 @@ def symbolicate(chromeHangsObj):
     try:
         responseSymbols = json.loads(responseJson)
         # Sanity check
-        if len(chromeHangsObj) != len(responseSymbols):
-            sys.stderr.write(str(len(responseSymbols)) + " hangs in response, " + str(len(chromeHangsObj)) + " hangs in request!\n")
+        if numStacks != len(responseSymbols):
+            sys.stderr.write(str(len(responseSymbols)) + " hangs in response, " + str(numStacks) + " hangs in request!\n")
             return None
         
         # Sanity check
-        for hangIndex in range(0, len(chromeHangsObj)):
-            requestStackLen = len(chromeHangsObj[hangIndex]["stack"])
+        for hangIndex in range(0, numStacks):
+            if version == 1:
+                stack = chromeHangsObj[hangIndex]["stack"]
+            else:
+                stack = chromeHangsObj["stacks"][hangIndex]
+            requestStackLen = len(stack)
             responseStackLen = len(responseSymbols[hangIndex])
             if requestStackLen != responseStackLen:
-                sys.stderr.write(str(len(responseStackLen)) + " symbols in response, " + str(len(requestStackLen)) + " PCs in request!\n")
+                sys.stderr.write(str(responseStackLen) + " symbols in response, " + str(requestStackLen) + " PCs in request!\n")
                 return None
     except Exception as e:
         sys.stderr.write("Exception while parsing server response to forwarded request: " + str(e) + "\n")
