@@ -29,7 +29,6 @@ import org.apache.pig.PigServer;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 import org.apache.pig.FuncSpec;
-import com.mozilla.telemetry.pig.MiniCluster;
 
 import org.junit.Test;
 import org.junit.Before;
