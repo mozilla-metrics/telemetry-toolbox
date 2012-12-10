@@ -100,4 +100,7 @@ public interface TelemetryConstants {
     public static final String CORE_INFO_DELIMITER = "\u0002";
     public static final String COMPKEY_DELIMITER = ":";
 
+    public static final String VALID = "valid";
+    public static final String VALIDATION_SCHEMA = "validationSchema";
+    public static final String VALID_FOR_SCHEMA = "validForSchema";
 }

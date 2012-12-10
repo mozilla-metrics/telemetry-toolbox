@@ -124,7 +124,6 @@ public class HistogramValueTuples extends EvalFunc<DataBag> {
         if (input == null || input.size() == 0) {
             return null;
         }
-        
         try {
             DataBag output = bagFactory.newDefaultBag();
             Map<String,Map<String,Object>> m = (Map<String,Map<String,Object>>)input.get(0);
@@ -181,8 +180,7 @@ public class HistogramValueTuples extends EvalFunc<DataBag> {
                     }
                 }
             }
-            
-            Map<String,Object> smMap = (Map<String,Object>)input.get(1);
+            Map<String,Object> smMap = input.size() == 2 ? (Map<String,Object>)input.get(1) : null;
             if (smMap != null) {
                 for (Map.Entry<String, Object> measure : smMap.entrySet()) {
                     String measureKey = SIMPLE_MEASURES_PREFIX + measure.getKey().toUpperCase();
