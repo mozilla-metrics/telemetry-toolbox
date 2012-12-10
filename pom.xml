@@ -214,7 +214,7 @@
 			<groupId>org.elasticsearch</groupId>
 			<artifactId>elasticsearch</artifactId>
 			<version>0.19.3</version>
-		</dependency>
+		</dependency>         
 		<!-- Mozilla Akela -->
 		<dependency>
 			<groupId>com.mozilla</groupId>

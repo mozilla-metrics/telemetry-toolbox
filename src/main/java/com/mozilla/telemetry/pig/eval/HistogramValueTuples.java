@@ -43,7 +43,6 @@ public class HistogramValueTuples extends HistogramTupleBase {
         if (input == null || input.size() == 0) {
             return null;
         }
-        
         try {
             DataBag output = bagFactory.newDefaultBag();
             Map<String,Map<String,Object>> m = (Map<String,Map<String,Object>>)input.get(0);
@@ -104,7 +103,7 @@ public class HistogramValueTuples extends HistogramTupleBase {
                     }
                 }
             }
-            
+
             Map<String,Object> smMap = (Map<String,Object>)input.get(1);
             if (smMap != null) {  
                 DataBag resultsBag = smt.exec(tupleFactory.newTuple(smMap));
