@@ -32,10 +32,11 @@ import com.mozilla.telemetry.elasticsearch.TelemetryDataAggregate.Info;
 
 public class AggregateJson extends EvalFunc<String> {
     
-    public static enum STATS { INVALID_ROW_SIZE };
+    public static enum STATS { INVALID_ROW_SIZE, CASTING_ERROR };
     
     // tuple field indices
-    private static final int VALID_ROW_SIZE = 19;
+    private static final int VALID_ROW_SIZE = 20;
+    // dimensional group indices
     private static final int DATE_IDX = 0;
     private static final int REASON_IDX = 1;
     private static final int PRODUCT_IDX = 2;
@@ -46,15 +47,17 @@ public class AggregateJson extends EvalFunc<String> {
     private static final int OS_VERSION_IDX = 7;
     private static final int APP_BUILD_ID_IDX = 8;
     private static final int PLAT_BUILD_ID_IDX = 9;
-    private static final int HIST_NAME_IDX = 10;
-    private static final int HIST_VALUE_IDX = 11;
-    private static final int BUCKET_COUNT_IDX = 12;
-    private static final int MIN_RANGE_IDX = 13;
-    private static final int MAX_RANGE_IDX = 14;
-    private static final int HIST_TYPE_IDX = 15;
-    private static final int VALUE_SUM_COUNT_IDX = 16;
-    private static final int HIST_NAME_SUM_IDX = 17;
-    private static final int HIST_NAME_DOC_COUNT_IDX = 18;
+    private static final int HIST_IS_VALID_IDX = 10;
+    // bag indices
+    private static final int HIST_NAME_IDX = 11;
+    private static final int HIST_VALUE_IDX = 12;
+    private static final int BUCKET_COUNT_IDX = 13;
+    private static final int MIN_RANGE_IDX = 14;
+    private static final int MAX_RANGE_IDX = 15;
+    private static final int HIST_TYPE_IDX = 16;
+    private static final int VALUE_SUM_COUNT_IDX = 17;
+    private static final int HIST_NAME_SUM_IDX = 18;
+    private static final int HIST_NAME_DOC_COUNT_IDX = 19;
     
     private static final ObjectMapper jsonMapper = new ObjectMapper();
     
@@ -77,23 +80,30 @@ public class AggregateJson extends EvalFunc<String> {
         info.setVersion((String)groupTuple.get(OS_VERSION_IDX));
         info.setAppBuildId((String)groupTuple.get(APP_BUILD_ID_IDX));
         info.setPlatformBuildId((String)groupTuple.get(PLAT_BUILD_ID_IDX));
+        boolean isValid = ((Integer)groupTuple.get(HIST_IS_VALID_IDX)) == 1 ? true : false;
+        info.setIsValid(isValid);
         tda.setInfo(info);
         DataBag db = (DataBag)input.get(1);
-        for (Iterator<Tuple> iter = db.iterator(); iter.hasNext(); ) {
-            Tuple t = iter.next();
-            if (t.size() != VALID_ROW_SIZE) {
-                pigLogger.warn(this, "Invalid row size: " + t.size(), STATS.INVALID_ROW_SIZE);
-                continue;
+        try {
+            for (Iterator<Tuple> iter = db.iterator(); iter.hasNext(); ) {
+                Tuple t = iter.next();
+                if (t.size() != VALID_ROW_SIZE) {
+                    pigLogger.warn(this, "Invalid row size: " + t.size(), STATS.INVALID_ROW_SIZE);
+                    continue;
+                }
+                String histName = (String)t.get(HIST_NAME_IDX);
+                tda.addOrPutHistogramValue(histName, String.valueOf(t.get(HIST_VALUE_IDX)), ((Number)t.get(VALUE_SUM_COUNT_IDX)).longValue());
+                tda.setHistogramSum(histName, ((Number)t.get(HIST_NAME_SUM_IDX)).longValue());
+                tda.setHistogramCount(histName, ((Number)t.get(HIST_NAME_DOC_COUNT_IDX)).intValue());
+                tda.setHistogramBucketCount(histName, ((Number)t.get(BUCKET_COUNT_IDX)).intValue());
+                tda.setHistogramRange(histName, ((Number)t.get(MIN_RANGE_IDX)).longValue(), ((Number)t.get(MAX_RANGE_IDX)).longValue());
+                tda.setHistogramType(histName, ((Number)t.get(HIST_TYPE_IDX)).intValue());
             }
-            String histName = (String)t.get(HIST_NAME_IDX);
-            tda.addOrPutHistogramValue(histName, String.valueOf(t.get(HIST_VALUE_IDX)), ((Number)t.get(VALUE_SUM_COUNT_IDX)).longValue());
-            tda.setHistogramSum(histName, ((Number)t.get(HIST_NAME_SUM_IDX)).longValue());
-            tda.setHistogramCount(histName, ((Number)t.get(HIST_NAME_DOC_COUNT_IDX)).intValue());
-            tda.setHistogramBucketCount(histName, ((Number)t.get(BUCKET_COUNT_IDX)).intValue());
-            tda.setHistogramRange(histName, ((Number)t.get(MIN_RANGE_IDX)).longValue(), ((Number)t.get(MAX_RANGE_IDX)).longValue());
-            tda.setHistogramType(histName, ((Number)t.get(HIST_TYPE_IDX)).intValue());
+        } catch (ClassCastException e) {
+            System.err.println("Failed to process entry input: ");
+            System.err.println(input.toDelimitedString(","));
+            throw e;
         }
-
         return jsonMapper.writeValueAsString(tda);
     }
 

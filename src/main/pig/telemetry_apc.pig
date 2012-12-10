@@ -1,5 +1,8 @@
-register 'akela-0.4-SNAPSHOT.jar'
+register 'akela-0.5-SNAPSHOT.jar'
 register 'telemetry-toolbox-0.2-SNAPSHOT.jar'
+register 'jackson-core-2.0.6.jar'
+register 'jackson-databind-2.0.6.jar'
+register 'jackson-annotations-2.0.6.jar'
 
 SET pig.logfile telemetry_apc.log;
 SET pig.tmpfilecompression true;

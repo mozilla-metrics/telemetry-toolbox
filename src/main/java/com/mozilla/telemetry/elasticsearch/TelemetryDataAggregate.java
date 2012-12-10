@@ -53,6 +53,8 @@ public class TelemetryDataAggregate {
         private String version;
         @JsonProperty("reason")
         private String reason;
+        @JsonProperty("valid")
+        private boolean isValid;
         
         public String getAppName() {
             return appName;
@@ -107,6 +109,12 @@ public class TelemetryDataAggregate {
         }
         public void setReason(String reason) {
             this.reason = reason;
+        }
+        public boolean isValid() {
+            return isValid;
+        }
+        public void setIsValid(boolean isValid) {
+            this.isValid = isValid;
         }
     }
     

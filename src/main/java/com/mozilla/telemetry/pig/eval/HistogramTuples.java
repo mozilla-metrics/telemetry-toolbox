@@ -36,13 +36,14 @@ public class HistogramTuples extends EvalFunc<DataBag> {
     private static BagFactory bagFactory = BagFactory.getInstance();
     private static TupleFactory tupleFactory = TupleFactory.getInstance();
     
-    private static final int OUTPUT_TUPLE_SIZE = 6;
+    private static final int OUTPUT_TUPLE_SIZE = 7;
     private static final int HIST_NAME_IDX = 0;
     private static final int SUM_IDX = 1;
     private static final int BUCKET_COUNT_IDX = 2;
     private static final int MIN_RANGE_IDX = 3;
     private static final int MAX_RANGE_IDX = 4;
     private static final int HIST_TYPE_IDX = 5;
+    private static final int HIST_IS_VALID = 6;
     
     private static final String SIMPLE_MEASURES_PREFIX = "SIMPLE_MEASURES_";
     private static final int DAY_IN_MINUTES = 1440;
@@ -94,6 +95,10 @@ public class HistogramTuples extends EvalFunc<DataBag> {
                         long sum = ((Number)hv.get("sum")).longValue();
                         int bucketCount = ((Number)hv.get("bucket_count")).intValue();
                         int histogramType = ((Number)hv.get("histogram_type")).intValue();
+                        int isValid = 1;
+                        if (hv.containsKey("valid")) {
+                            isValid = Boolean.parseBoolean((String)hv.get("valid")) ? 1 : 0;
+                        }
                         
                         int minRange = 0, maxRange = 0;
                         DataBag rangeBag = (DataBag)hv.get("range");
@@ -115,6 +120,7 @@ public class HistogramTuples extends EvalFunc<DataBag> {
                         t.set(MIN_RANGE_IDX, minRange);
                         t.set(MAX_RANGE_IDX, maxRange);
                         t.set(HIST_TYPE_IDX, histogramType);
+                        t.set(HIST_IS_VALID, isValid);
                         output.add(t);
                     }
                 }
@@ -137,6 +143,7 @@ public class HistogramTuples extends EvalFunc<DataBag> {
                                 t.set(MIN_RANGE_IDX, 0);
                                 t.set(MAX_RANGE_IDX, 1);
                                 t.set(HIST_TYPE_IDX, 2);
+                                t.set(HIST_IS_VALID, 1);
                                 output.add(t);
                             }
                         }
@@ -148,6 +155,7 @@ public class HistogramTuples extends EvalFunc<DataBag> {
                         int bucketCount = 0;
                         int minRange = 0, maxRange = 0;
                         int histogramType = 0;
+                        
                         if ("uptime".equals(measure.getKey())) {
                             bucketCount = uptimeBuckets.length;
                             minRange = (int)uptimeBuckets[0];
@@ -161,6 +169,9 @@ public class HistogramTuples extends EvalFunc<DataBag> {
                             minRange = 30000;
                             maxRange = 90000;
                             histogramType = 1;
+                        } else if ("savedPings".equals(measure.getKey())) {
+                            bucketCount = 51;
+                            maxRange = 50;
                         } else {
                             bucketCount = 31;
                             maxRange = 30001;
@@ -172,6 +183,7 @@ public class HistogramTuples extends EvalFunc<DataBag> {
                         t.set(MIN_RANGE_IDX, minRange);
                         t.set(MAX_RANGE_IDX, maxRange);
                         t.set(HIST_TYPE_IDX, histogramType);
+                        t.set(HIST_IS_VALID, 1);
                         output.add(t);
                     }
                 }

@@ -22,55 +22,11 @@ package com.mozilla.telemetry.pig.eval;
 import java.io.IOException;
 import java.util.Map;
 
-import org.apache.pig.EvalFunc;
-import org.apache.pig.data.BagFactory;
 import org.apache.pig.data.DataBag;
 import org.apache.pig.data.Tuple;
-import org.apache.pig.data.TupleFactory;
 
-public class SimpleMeasureTuples extends EvalFunc<DataBag> {
-
-    private static BagFactory bagFactory = BagFactory.getInstance();
-    private static TupleFactory tupleFactory = TupleFactory.getInstance();
-
-    private static final String SIMPLE_MEASURES_PREFIX = "SIMPLE_MEASURES_";
-    
-    private static final long DAY_IN_MINUTES = 1440;
-    
-    /**
-     * @param uptime
-     * @return
-     */
-    private String bucketUptime(long uptime) {
-        String bucket = "0";
-        if (uptime < 0) {
-            bucket = "-1";
-        } else if (uptime >= 0 && uptime <= DAY_IN_MINUTES) {
-            bucket = "720";
-        } else if (uptime > DAY_IN_MINUTES) {
-            bucket = "1441";
-        }
+public class SimpleMeasureTuples extends HistogramTupleBase {
         
-        return bucket;
-    }
-    
-    /**
-     * @param t
-     * @return
-     */
-    private String bucketGenericTime(long t) {
-        String bucket = "0";
-        if (t < 0) {
-            bucket = "-1";
-        } else if (t >= 0 && t < 30000) {
-            bucket = String.valueOf((long)Math.round((double)t / 1000.0d) * 1000);
-        } else {
-            bucket = "30001";
-        }
-        
-        return bucket;
-    }
-    
     @SuppressWarnings("unchecked")
     @Override
     public DataBag exec(Tuple input) throws IOException {
@@ -89,48 +45,60 @@ public class SimpleMeasureTuples extends EvalFunc<DataBag> {
                         Object jso = js.getValue();
                         if (jso != null) {
                             long booleanNum = ((Number)jso).longValue();
-                            Tuple t = tupleFactory.newTuple(8);
-                            t.set(0, measureKey + "_" + js.getKey().toUpperCase());
-                            t.set(1, booleanNum);
-                            t.set(2, 1.0d);
-                            t.set(3, booleanNum);
-                            t.set(4, 2);
-                            t.set(5, 0);
-                            t.set(6, 1);
-                            t.set(7, 2);
+                            Tuple t = tupleFactory.newTuple(OUTPUT_TUPLE_SIZE);
+                            t.set(HIST_NAME_IDX, measureKey + "_" + js.getKey().toUpperCase());
+                            t.set(HIST_VALUE_IDX, booleanNum);
+                            t.set(VALUE_COUNT_IDX, 1.0d);
+                            t.set(SUM_IDX, booleanNum);
+                            t.set(BUCKET_COUNT_IDX, 2);
+                            t.set(MIN_RANGE_IDX, 0);
+                            t.set(MAX_RANGE_IDX, 1);
+                            t.set(HIST_TYPE_IDX, 2);
+                            t.set(HIST_IS_VALID, 1);
                             output.add(t);
                         }
                     }
                 } else if (vo != null) {
                     long timeValue = ((Number)vo).longValue();
-                    Tuple t = tupleFactory.newTuple(8);
-                    t.set(0, measureKey);
+                    Tuple t = tupleFactory.newTuple(OUTPUT_TUPLE_SIZE);
+                    t.set(HIST_NAME_IDX, measureKey);
                     
                     int bucketCount = 0;
                     int minRange = 0, maxRange = 0;
                     int histogramType = 0;
                     if ("uptime".equals(measure.getKey())) {
-                        t.set(1, bucketUptime(timeValue));
-                        bucketCount = 3;
-                        maxRange = 1441;
+                        t.set(HIST_VALUE_IDX, bucketUptime((int)timeValue));
+                        bucketCount = uptimeBuckets.length;
+                        minRange = (int)uptimeBuckets[0];
+                        maxRange = (int)uptimeBuckets[uptimeBuckets.length-1];
                     } else if ("startupInterrupted".equals(measure.getKey())) {
-                        t.set(1, String.valueOf(timeValue));
+                        t.set(HIST_VALUE_IDX, String.valueOf(timeValue));
                         bucketCount = 2;
                         maxRange = 1;
                         histogramType = 2;
+                    } else if ("startupCrashDetectionEnd".equals(measure.getKey())) {
+                        bucketCount = 30;
+                        minRange = 30000;
+                        maxRange = 90000;
+                        histogramType = 1;
+                        t.set(HIST_VALUE_IDX, bucketGenericTime(timeValue, minRange, maxRange, ((maxRange-minRange)/bucketCount), "0"));
+                    } else if ("savedPings".equals(measure.getKey())) {
+                        bucketCount = 51;
+                        maxRange = 50;
+                        t.set(HIST_VALUE_IDX, bucketGenericTime(timeValue, minRange, maxRange, 1, "0"));
                     } else {
-                        t.set(1, bucketGenericTime(timeValue));
                         bucketCount = 31;
                         maxRange = 30001;
                         histogramType = 1;
+                        t.set(HIST_VALUE_IDX, bucketGenericTime(timeValue, minRange, maxRange, 1000, "0"));
                     }
-                    
-                    t.set(2, 1.0d);
-                    t.set(3, timeValue);
-                    t.set(4, bucketCount);
-                    t.set(5, minRange);
-                    t.set(6, maxRange);
-                    t.set(7, histogramType);
+                    t.set(VALUE_COUNT_IDX, 1.0d);
+                    t.set(SUM_IDX, timeValue);
+                    t.set(BUCKET_COUNT_IDX, bucketCount);
+                    t.set(MIN_RANGE_IDX, minRange);
+                    t.set(MAX_RANGE_IDX, maxRange);
+                    t.set(HIST_TYPE_IDX, histogramType);
+                    t.set(HIST_IS_VALID, 1);
                     output.add(t);
                 }
             }

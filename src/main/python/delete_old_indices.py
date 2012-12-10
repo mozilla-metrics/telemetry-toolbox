@@ -17,10 +17,10 @@ def main():
     
     for k in sorted(indices_dict.iterkeys()):
         if k.startswith('telemetry_agg'):
-            d = datetime.strptime(k.replace('telemetry_agg_',''), '%Y%m%d')
+            year_month = datetime.strptime(k.replace('telemetry_agg_',''), '%Y%m')
             now = datetime.now()
-            td = now - d
-            if td.days > 1:
+            td = now - year_month
+            if td.days > 180:
                 print str(k) + " => " + str(indices_dict[k])
                 conn.delete_index_if_exists(k)
 
