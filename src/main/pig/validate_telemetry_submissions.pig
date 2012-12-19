@@ -7,10 +7,11 @@ SET pig.tmpfilecompression true;
 SET pig.tmpfilecompression.codec lzo;
 SET mapred.compress.map.output true;
 SET mapred.map.output.compression.codec org.apache.hadoop.io.compress.SnappyCodec;
+SET default_parallel 100;
 
 define ValidateTelemetrySubmission com.mozilla.telemetry.pig.eval.json.ValidateTelemetrySubmission('telemetry/telemetry_spec_lookup.properties');
 
-raw = LOAD 'hbase://$input_table' USING com.mozilla.pig.load.HBaseMultiScanLoader('$start_date', '$end_date', 'yyyyMMdd', 'data:json') AS (k:chararray, json:chararray);
+raw = LOAD 'hbase://$input_table' USING com.mozilla.pig.load.HBaseMultiScanLoader('$start_date', '$end_date', 'yyyyMMdd', 'data:json') AS (k:bytearray, json:chararray);
 
 validated_docs = foreach raw generate k, ValidateTelemetrySubmission(*) AS json;
 filter_nulls = filter validated_docs by json is not null;

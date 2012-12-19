@@ -171,7 +171,12 @@ public class ValidateTelemetrySubmission extends EvalFunc<String> {
     @SuppressWarnings("unchecked")
     protected String getAppVersionFromTelemetryDoc(Map<String,Object> crash) {
         LinkedHashMap<String, Object> infoValue = (LinkedHashMap<String, Object>) crash.get(TelemetryConstants.INFO);
-        String appVersion = (String) infoValue.get(TelemetryConstants.APP_VERSION);
+        String appVersion = null;
+        try {
+            appVersion = (String) infoValue.get(TelemetryConstants.APP_VERSION);
+        } catch(Exception e) {
+            LOG.info("ERROR: no appversion in telemetry submission "+e.getMessage());
+        }
         return appVersion;
     }
     
@@ -203,12 +208,17 @@ public class ValidateTelemetrySubmission extends EvalFunc<String> {
         try {
             crash = jsonMapper.readValue(json, new TypeReference<Map<String,Object>>() { });
             String appVersion = getAppVersionFromTelemetryDoc(crash);
-            if(appVersion == null) LOG.info("appVersion is null "+json);
             LinkedHashMap<String,Object> info = (LinkedHashMap<String, Object>) crash.get(TelemetryConstants.INFO);
+            if (info == null) {
+                info = new LinkedHashMap<String,Object>();
+                crash.put(TelemetryConstants.INFO,info);
+            }
+            
             if(appVersion  == null) {
                 info.put(TelemetryConstants.VALID_FOR_SCHEMA,"false");
                 return jsonMapper.writeValueAsString(crash);
             }
+            
             Map<String, Map<String,Object>> referenceValues = getJsonSpec(appVersion);
             if(referenceValues == null) 
                 LOG.info("referenceValues is null "+appVersion);
