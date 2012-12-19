@@ -21,7 +21,7 @@ define OsVersionNormalizer com.mozilla.pig.eval.regex.FindOrReturn('^[0-9](\\.*[
 define IsMap com.mozilla.pig.filter.map.IsMap();
 define AggregateJson com.mozilla.telemetry.pig.eval.json.AggregateJson();
 
-%default es_tasks 4
+%default es_tasks 8
 %default es_size 100
 
 raw = LOAD 'hbase://telemetry' USING com.mozilla.pig.load.HBaseMultiScanLoader('$start_date', '$end_date', 'yyyyMMdd', 'data:json') AS (k:bytearray, json:chararray);
@@ -85,7 +85,7 @@ flat = FOREACH cogrpd GENERATE FLATTEN(hist_sums),
 
 /* Regroup and generate aggregate JSON objects */
 grpd = GROUP flat BY (d,reason,product,product_version,product_channel,arch,os,os_version,app_build_id,plat_build_id,is_valid);
-agg_jsons = FOREACH grpd GENERATE AggregateJson(group, flat) AS agg_json:chararray;
+agg_jsons = FOREACH grpd GENERATE AggregateJson(group, flat) AS agg_json:chararray PARALLEL $es_tasks;
 
 /* Store JSON objects into HDFS (mainly for testing or verification) */
 /*STORE agg_jsons INTO 'telemetry-aggregates-json-$start_date-$end_date';*/
