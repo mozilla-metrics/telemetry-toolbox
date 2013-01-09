@@ -31,12 +31,20 @@ def symbolicate(chromeHangsObj):
         version = 1
         requestObj = chromeHangsObj
         numStacks = len(chromeHangsObj)
+        if numStacks == 0:
+            return []
     else:
-        version = 2
         numStacks = len(chromeHangsObj["stacks"])
+        if numStacks == 0:
+            return []
+        if len(chromeHangsObj["memoryMap"][0]) == 2:
+            version = 3
+        else:
+            assert len(chromeHangsObj["memoryMap"][0]) == 4
+            version = 2
         requestObj = {"stacks"    : chromeHangsObj["stacks"],
                       "memoryMap" : chromeHangsObj["memoryMap"],
-                      "version"   : 2}
+                      "version"   : version}
     try:
         requestJson = json.dumps(requestObj)
         headers = { "Content-Type": "application/json" }
@@ -44,19 +52,19 @@ def symbolicate(chromeHangsObj):
         response = urllib2.urlopen(requestHandle)
     except Exception as e:
         sys.stderr.write("Exception while forwarding request: " + str(e) + "\n")
-        return None
+        return []
     try:
         responseJson = response.read()
     except Exception as e:
         sys.stderr.write("Exception while reading server response to symbolication request: " + str(e) + "\n")
-        return None
+        return []
     
     try:
         responseSymbols = json.loads(responseJson)
         # Sanity check
         if numStacks != len(responseSymbols):
             sys.stderr.write(str(len(responseSymbols)) + " hangs in response, " + str(numStacks) + " hangs in request!\n")
-            return None
+            return []
         
         # Sanity check
         for hangIndex in range(0, numStacks):
@@ -68,10 +76,10 @@ def symbolicate(chromeHangsObj):
             responseStackLen = len(responseSymbols[hangIndex])
             if requestStackLen != responseStackLen:
                 sys.stderr.write(str(responseStackLen) + " symbols in response, " + str(requestStackLen) + " PCs in request!\n")
-                return None
+                return []
     except Exception as e:
         sys.stderr.write("Exception while parsing server response to forwarded request: " + str(e) + "\n")
-        return None
+        return []
     
     return responseSymbols
 
@@ -82,18 +90,18 @@ def process(input_file, output_file):
         splits = line.split("\t");
         try:
             json_dict = json.loads(splits[1])
-            if len(json_dict["chromeHangs"]) > 0:
-                symbol_stacks = symbolicate(json_dict["chromeHangs"])
-                del json_dict["chromeHangs"]
-                del json_dict["histograms"]
-                if symbol_stacks:
-                    for stack in symbol_stacks:
-                        fout.write(splits[0].rstrip())
-                        fout.write("\t")
-                        fout.write(json.dumps(json_dict))
-                        fout.write("\n----- BEGIN SYMBOL STACK -----\n")
-                        fout.write("\n".join(stack))
-                        fout.write("\n----- END SYMBOL STACK -----\n")
+            symbol_stacks = symbolicate(json_dict["chromeHangs"])
+            del json_dict["chromeHangs"]
+            del json_dict["histograms"]
+
+            fout.write(splits[0].rstrip())
+            fout.write("\t")
+            fout.write(json.dumps(json_dict))
+
+            for stack in symbol_stacks:
+                fout.write("\n----- BEGIN SYMBOL STACK -----\n")
+                fout.write("\n".join(stack))
+                fout.write("\n----- END SYMBOL STACK -----\n")
         except Exception as e:
             sys.stderr.write("Exception while processing json item: " + str(e) + "\n")
     fin.close()
