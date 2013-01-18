@@ -90,18 +90,34 @@ def process(input_file, output_file):
         splits = line.split("\t");
         try:
             json_dict = json.loads(splits[1])
-            symbol_stacks = symbolicate(json_dict["chromeHangs"])
-            del json_dict["chromeHangs"]
-            del json_dict["histograms"]
 
+            hang_stacks = []
+            hangs = json_dict.get("chromeHangs")
+            if hangs:
+              del json_dict["chromeHangs"]
+              hang_stacks = symbolicate(hangs)
+
+            late_writes_stacks = []
+            writes = json_dict.get("lateWrites")
+            if writes:
+              late_writes_stacks = symbolicate(writes)
+              del json_dict["lateWrites"]
+
+            del json_dict["histograms"]
             fout.write(splits[0].rstrip())
             fout.write("\t")
             fout.write(json.dumps(json_dict))
 
-            for stack in symbol_stacks:
-                fout.write("\n----- BEGIN SYMBOL STACK -----\n")
+            for stack in hang_stacks:
+                fout.write("\n----- BEGIN HANG STACK -----\n")
                 fout.write("\n".join(stack))
-                fout.write("\n----- END SYMBOL STACK -----\n")
+                fout.write("\n----- END HANG STACK -----\n")
+
+            for stack in late_writes_stacks:
+                fout.write("\n----- BEGIN LATE WRITE STACK -----\n")
+                fout.write("\n".join(stack))
+                fout.write("\n----- END LATE WRITE STACK -----\n")
+
         except Exception as e:
             sys.stderr.write("Exception while processing json item: " + str(e) + "\n")
     fin.close()
