@@ -10,7 +10,6 @@ import getopt
 import json
 import sys
 import urllib2
-import codecs
 import re
 import gzip
 
@@ -52,6 +51,7 @@ def symbolicate(chromeHangsObj):
         response = urllib2.urlopen(requestHandle)
     except Exception as e:
         sys.stderr.write("Exception while forwarding request: " + str(e) + "\n")
+        sys.stderr.write(requestJson)
         return []
     try:
         responseJson = response.read()
@@ -84,42 +84,65 @@ def symbolicate(chromeHangsObj):
     return responseSymbols
 
 def process(input_file, output_file):
-    fin = open(input_file, "r")
+    if input_file == '-':
+        fin = sys.stdin
+    else:
+        fin = open(input_file, "rb")
+
     fout = gzip.open(output_file, "wb")
-    for line in fin:
-        splits = line.split("\t");
-        try:
-            json_dict = json.loads(splits[1])
 
-            hang_stacks = []
-            hangs = json_dict.get("chromeHangs")
-            if hangs:
-              del json_dict["chromeHangs"]
-              hang_stacks = symbolicate(hangs)
+    while True:
+        first_byte = fin.read(1)
+        if len(first_byte) == 0:
+            break;
+        assert len(first_byte) == 1
 
-            late_writes_stacks = []
-            writes = json_dict.get("lateWrites")
-            if writes:
-              late_writes_stacks = symbolicate(writes)
-              del json_dict["lateWrites"]
+        date = fin.read(8)
+        assert len(date) == 8
 
-            del json_dict["histograms"]
-            fout.write(splits[0].rstrip())
-            fout.write("\t")
-            fout.write(json.dumps(json_dict))
+        uuid = fin.read(36)
+        assert len(uuid) == 36
 
-            for stack in hang_stacks:
-                fout.write("\n----- BEGIN HANG STACK -----\n")
-                fout.write("\n".join(stack))
-                fout.write("\n----- END HANG STACK -----\n")
+        first_uuid_byte = int(uuid[0:2], 16) - 128
+        if first_uuid_byte < 0:
+            first_uuid_byte += 256
+        assert first_uuid_byte == ord(first_byte)
 
-            for stack in late_writes_stacks:
-                fout.write("\n----- BEGIN LATE WRITE STACK -----\n")
-                fout.write("\n".join(stack))
-                fout.write("\n----- END LATE WRITE STACK -----\n")
+        tab = fin.read(1)
+        assert tab == '\t'
 
-        except Exception as e:
-            sys.stderr.write("Exception while processing json item: " + str(e) + "\n")
+        jsonstr = fin.readline()
+        json_dict = json.loads(jsonstr)
+
+        hang_stacks = []
+        hangs = json_dict.get("chromeHangs")
+        if hangs:
+          del json_dict["chromeHangs"]
+          hang_stacks = symbolicate(hangs)
+
+        late_writes_stacks = []
+        writes = json_dict.get("lateWrites")
+        if writes:
+          late_writes_stacks = symbolicate(writes)
+          del json_dict["lateWrites"]
+
+        del json_dict["histograms"]
+        fout.write(date)
+        fout.write("\t")
+        fout.write(uuid)
+        fout.write("\t")
+        fout.write(json.dumps(json_dict))
+
+        for stack in hang_stacks:
+            fout.write("\n----- BEGIN HANG STACK -----\n")
+            fout.write("\n".join(stack))
+            fout.write("\n----- END HANG STACK -----\n")
+
+        for stack in late_writes_stacks:
+            fout.write("\n----- BEGIN LATE WRITE STACK -----\n")
+            fout.write("\n".join(stack))
+            fout.write("\n----- END LATE WRITE STACK -----\n")
+
     fin.close()
     fout.close()  
 

@@ -12,7 +12,7 @@ SET mapred.map.output.compression.codec org.apache.hadoop.io.compress.SnappyCode
 define IsMap com.mozilla.pig.filter.map.IsMap();
 define Size com.mozilla.pig.eval.Size();
 
-raw = LOAD 'hbase://telemetry' USING com.mozilla.pig.load.HBaseMultiScanLoader('$start_date', '$end_date', 'yyyyMMdd', 'data:json') AS (k:chararray, json:chararray);
+raw = LOAD 'hbase://telemetry' USING com.mozilla.pig.load.HBaseMultiScanLoader('$start_date', '$end_date', 'yyyyMMdd', 'data:json') AS (k:bytearray, json:chararray);
 
 genmap = FOREACH raw GENERATE k,json,com.mozilla.pig.eval.json.JsonMap(json) AS json_map:map[];
 
