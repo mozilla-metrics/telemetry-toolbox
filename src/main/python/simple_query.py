@@ -34,10 +34,13 @@ def main():
         parser.error("enddate is not given")
     if not options.filename:
         parser.error("please provide file name to store generated pig code")
-    if args != None and len(args[0].split()) < 2:
-        parser.error("please provide query as CYCLE_COLLECTOR > 3000")
 
-    construct_pig_script(args[0],options)
+
+    if args != None and len(args) == 1:
+        query = args[0]
+    else:
+        query = None
+    construct_pig_script(query,options)
     run_pig_script(options.filename)
 
 def run_pig_script(filename):
@@ -50,10 +53,13 @@ def run_pig_script(filename):
 def construct_pig_script(query,options):
     pig_script = construct_pig_headers()
     pig_fetch_raw = construct_pig_fetch_query(options.startdate,options.enddate)
-    (pig_defines, pig_filter)= construct_pig_filter_query(query)
-    pig_script += pig_defines
-    pig_script += pig_fetch_raw
-    pig_script += pig_filter
+    if query != None:
+        (pig_defines, pig_filter)= construct_pig_filter_query(query)
+        pig_script += pig_defines
+        pig_script += pig_fetch_raw
+        pig_script += pig_filter
+    else:
+        pig_script += pig_fetch_raw
 
     if options.sample:
         pig_script += construct_pig_sample(options.sample)
@@ -88,13 +94,13 @@ def construct_pig_sample(sample):
     return "filter_raw = SAMPLE filter_raw "+sample+"; \n"
 
 def construct_pig_fetch_query(start_date,end_date):
-    return "raw = LOAD 'hbase://telemetry' USING com.mozilla.pig.load.HBaseMultiScanLoader('"+start_date+"', '"+end_date+"', 'yyyyMMdd', 'data:json') AS (k:chararray, json:chararray); \n"
+    return "filter_raw = LOAD 'hbase://telemetry' USING com.mozilla.pig.load.HBaseMultiScanLoader('"+start_date+"', '"+end_date+"', 'yyyyMMdd', 'data:json') AS (k:chararray, json:chararray); \n"
 
 def construct_pig_filter_query(query):
     query_split = query.split("and")
     pig_defines = ""
     methods = []
-    pig_filter = "filter_raw = FILTER raw by "
+    pig_filter = "filter_raw = FILTER filter_raw by "
     count = 1
     for q in query_split:
         (json_key, sub_json_key,comparator, value) = parse_query(q)

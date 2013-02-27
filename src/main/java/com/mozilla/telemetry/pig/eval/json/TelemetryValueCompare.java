@@ -2,14 +2,10 @@ package com.mozilla.telemetry.pig.eval.json;
 
 import java.io.IOException;
 import java.util.Map;
-import java.math.BigInteger;
-import java.security.*;
 
-import org.apache.commons.lang.StringUtils;
 import org.apache.pig.FilterFunc;
-import org.apache.pig.data.DataByteArray;
 import org.apache.pig.data.Tuple;
-import org.apache.pig.impl.util.UDFContext;
+
 import org.apache.log4j.Logger;
 
 import org.codehaus.jackson.JsonParseException;
@@ -23,13 +19,13 @@ public class TelemetryValueCompare extends FilterFunc {
     private String jsonKey;
     private String subJsonKey;
     private String comparator;
-    private Integer compareValue;
+    private Object compareValue;
 
-    public TelemetryValueCompare(String jsonKey,String comparator,String compareValue) {
+    public TelemetryValueCompare(String jsonKey,String comparator,Object compareValue) {
         jsonMapper = new ObjectMapper();
         this.jsonKey = jsonKey;
         this.comparator = comparator;
-        this.compareValue = Integer.parseInt(compareValue);
+        this.compareValue = compareValue;
     }
 
     public TelemetryValueCompare(String jsonKey,String subJsonKey,String comparator,String compareValue) {
@@ -37,7 +33,7 @@ public class TelemetryValueCompare extends FilterFunc {
         this.jsonKey = jsonKey;
         this.subJsonKey = subJsonKey;
         this.comparator = comparator;
-        this.compareValue = Integer.parseInt(compareValue);
+        this.compareValue = compareValue;
     }
 
     @Override
@@ -55,19 +51,29 @@ public class TelemetryValueCompare extends FilterFunc {
             Map<String, Object> jsonMap = jsonMapper.readValue(json, new TypeReference<Map<String, Object>>() {});
             Map<String, Object> histograms = (Map<String,Object>) jsonMap.get("histograms");
             Map<String, Object> simpleMeasurements = (Map<String,Object>) jsonMap.get("simpleMeasurements");
+            Map<String, Object> info = (Map<String,Object>) jsonMap.get("info");
 
             if (histograms.containsKey(jsonKey)) {
                 Map<String,Object> histogram  = (Map<String,Object>) histograms.get(jsonKey);
+
                 if (subJsonKey == null || subJsonKey.equals("values")) {
                     Map<String,Object> histValues = (Map<String,Object>)histogram.get("values");
                     return compareJsonMap(histValues);
                 } else {
                     Integer jsonValue = (Integer) histogram.get(subJsonKey);
-                    return compareJsonValue(jsonValue);
+                    return compareJsonInteger(jsonValue);
                 }
             } else if (simpleMeasurements.containsKey(jsonKey)) {
                 Integer jsonValue = (Integer) simpleMeasurements.get(jsonKey);
-                return compareJsonValue(jsonValue);
+                return compareJsonInteger(jsonValue);
+            } else if (info.containsKey(jsonKey)) {
+                Object value = info.get(jsonKey);
+                if (value.getClass().equals(Integer.TYPE)) {
+                } else if (value.getClass().equals(String.class)) {
+                    return compareJsonString((String)value);
+                } else if (value.getClass().equals(Boolean.TYPE)) {
+                    return compareJsonBoolean((Boolean)value);
+                }
             }
             return false;
         } catch(Exception e) {
@@ -81,25 +87,51 @@ public class TelemetryValueCompare extends FilterFunc {
         Integer histValue = null;
         for (String key: values.keySet()) {
             histValue = Integer.parseInt(key);
-            cmpFlag = compareJsonValue(histValue);
+            cmpFlag = compareJsonInteger(histValue);
             if (cmpFlag)
                 return cmpFlag;
         }
         return cmpFlag;
     }
-    
-    protected Boolean compareJsonValue(Integer jsonValue) {
+
+    protected Boolean compareJsonString(String jsonValue) {
+        String value = (String) compareValue;
+        if (value.equals("null")) return compareNull(jsonValue);
+        return jsonValue != null ? jsonValue.equals(value) : false;
+    }
+
+    protected Boolean compareJsonInteger(Integer jsonValue) {
+        String compareValue = (String) this.compareValue;
+        if (compareValue.equals("null")) return compareNull(jsonValue);
+        Integer value =  Integer.parseInt(compareValue);
+        
         if (comparator.equals(">"))
-            return jsonValue > compareValue;
+            return jsonValue > value;
         else if (comparator.equals("<"))
-            return jsonValue < compareValue;
+            return jsonValue < value;
         else if (comparator.equals("="))
-            return jsonValue == compareValue;
+            return jsonValue == value;
         else if (comparator.equals("<="))
-            return jsonValue <= compareValue;
+            return jsonValue <= value;
         else if (comparator.equals(">="))
-            return jsonValue >= compareValue;
+            return jsonValue >= value;
         return false;
     }
 
+    protected Boolean compareJsonBoolean(Boolean jsonValue) {
+        Boolean value = (Boolean) compareValue;
+        if (comparator.equals("="))
+            return (jsonValue == value);
+        else if (comparator.equals("!="))
+            return (jsonValue != value);
+        return false;
+    }
+
+    protected Boolean compareNull(Object jsonValue) {
+        if (comparator.equals("="))
+            return (jsonValue == null);
+        else if (comparator.equals("!="))
+            return (jsonValue != null);
+        return false;
+    }
 }
