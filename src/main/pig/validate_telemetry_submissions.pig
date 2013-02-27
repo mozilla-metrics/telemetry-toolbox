@@ -1,5 +1,4 @@
 register 'akela-0.4-SNAPSHOT.jar'
-register 'elephant-bird-2.2.0.jar'
 register 'telemetry-toolbox-0.2-SNAPSHOT.jar'
 
 SET pig.logfile validate-telemetry-submissions.log;
