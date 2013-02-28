@@ -48,7 +48,7 @@ def symbolicate(chromeHangsObj):
         requestJson = json.dumps(requestObj)
         headers = { "Content-Type": "application/json" }
         requestHandle = urllib2.Request(SYMBOL_SERVER_URL, requestJson, headers)
-        response = urllib2.urlopen(requestHandle)
+        response = urllib2.urlopen(requestHandle, timeout=1)
     except Exception as e:
         sys.stderr.write("Exception while forwarding request: " + str(e) + "\n")
         sys.stderr.write(requestJson)
@@ -91,6 +91,9 @@ def process(input_file, output_file):
 
     fout = gzip.open(output_file, "wb")
 
+    symbolication_erros = 0
+    symbolication_requests = 0
+
     while True:
         first_byte = fin.read(1)
         if len(first_byte) == 0:
@@ -119,12 +122,18 @@ def process(input_file, output_file):
         if hangs:
           del json_dict["chromeHangs"]
           hang_stacks = symbolicate(hangs)
+          symbolication_requests += 1
+          if hang_stacks == []:
+              symbolication_erros += 1
 
         late_writes_stacks = []
         writes = json_dict.get("lateWrites")
         if writes:
-          late_writes_stacks = symbolicate(writes)
           del json_dict["lateWrites"]
+          late_writes_stacks = symbolicate(writes)
+          symbolication_requests += 1
+          if late_writes_stacks == []:
+              symbolication_erros += 1
 
         del json_dict["histograms"]
         fout.write(date)
@@ -145,6 +154,7 @@ def process(input_file, output_file):
 
     fin.close()
     fout.close()  
+    sys.stderr.write("Requested %s symbolications. Got %s errors." % (symbolication_requests, symbolication_erros))
 
 class Usage(Exception):
 	def __init__(self, msg):
