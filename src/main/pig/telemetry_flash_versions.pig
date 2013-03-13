@@ -16,7 +16,7 @@ define ConvertNull com.mozilla.pig.eval.ConvertNull('NA');
 define OsVersionNormalizer com.mozilla.pig.eval.regex.FindOrReturn('^[0-9](\\.*[0-9]*){1}');
 define IsMap com.mozilla.pig.filter.map.IsMap();
 
-raw = LOAD 'hbase://telemetry' USING com.mozilla.pig.load.HBaseMultiScanLoader('$start_date', '$end_date', 'yyyyMMdd', 'data:json') AS (k:chararray, json:chararray);
+raw = LOAD 'hbase://telemetry' USING com.mozilla.pig.load.HBaseMultiScanLoader('$start_date', '$end_date', 'yyyyMMdd', 'data:json') AS (k:bytearray, json:chararray);
 genmap = FOREACH raw GENERATE k,com.mozilla.pig.eval.json.JsonMap(json) AS json_map:map[];
 filtered_genmap = FILTER genmap BY IsMap(json_map#'info') AND 
                                    IsMap(json_map#'histograms') AND
