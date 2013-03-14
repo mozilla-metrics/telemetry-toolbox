@@ -47,4 +47,4 @@ if [ "$?" -eq "0" ]; then
 else
    echo "ERROR: Failed to export Mobile Flash Versions"
 fi
-ssh $PUB_SERVER "chmod 644 $FLASH_VERSIONS_PATH/mobile-flash-versions/telemetry-flash-versions-$YESTERDAY-$YESTERDAY.csv"
+ssh $PUB_SERVER "chmod 644 $FLASH_VERSIONS_PATH/mobile-flash-versions/telemetry-mobile-flash-versions-$YESTERDAY-$YESTERDAY.csv"
