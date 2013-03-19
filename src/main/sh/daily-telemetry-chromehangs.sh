@@ -17,7 +17,16 @@ else
 fi
 
 hadoop fs -getmerge chrome-hangs-$YESTERDAY-$YESTERDAY $ETL_HOME/telemetry/chromehangs/chrome-hangs-$YESTERDAY.txt
-/usr/bin/python $ETL_HOME/symbolicate.py -i $ETL_HOME/telemetry/chromehangs/chrome-hangs-$YESTERDAY.txt -o $ETL_HOME/telemetry/chromehangs/chrome-hangs-$YESTERDAY.modified
+/usr/bin/python $ETL_HOME/symbolicate.py -i $ETL_HOME/telemetry/chromehangs/chrome-hangs-$YESTERDAY.txt -o $ETL_HOME/telemetry/chromehangs/chrome-hangs-$YESTERDAY.modified >> $LOG 2>&1
+
+SYMBOL_RESULT=$?
+if [ "$SYMBOL_RESULT" -eq "0" ]; then
+   echo "Symbolication succeeded for $YESTERDAY"
+else
+   echo "ERROR: Symbolication failed (code $SYMBOL_RESULT) for $YESTERDAY.  Check $LOG for more details."
+   exit 3
+fi
+
 mv $ETL_HOME/telemetry/chromehangs/chrome-hangs-$YESTERDAY.modified $ETL_HOME/telemetry/chromehangs/chrome-hangs-$YESTERDAY.txt.gz
 size=`stat --printf="%s" $ETL_HOME/telemetry/chromehangs/chrome-hangs-$YESTERDAY.txt.gz`
 if [ $size -gt 0 ]; then
