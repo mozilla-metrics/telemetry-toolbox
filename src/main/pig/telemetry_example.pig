@@ -35,7 +35,7 @@ filtered_genmap = FILTER genmap BY json_map#'info' IS NOT NULL
                                    AND json_map#'info'#'appVersion' IS NOT NULL;
 
 /* Extract the app version of each record */
-fx_by_version = FOREACH genmap GENERATE k, json_map#'info'#'appVersion' AS fx_version:chararray;
+fx_by_version = FOREACH filtered_genmap GENERATE k, json_map#'info'#'appVersion' AS fx_version:chararray;
 
 /* Group records by app version */
 grouped_versions = GROUP fx_by_version BY (fx_version);
