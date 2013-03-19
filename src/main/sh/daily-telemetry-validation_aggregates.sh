@@ -1,6 +1,6 @@
 #!/bin/bash
 
-. /home/metrics-etl/prod/daily-telemetry-setvars.sh
+. $(dirname $0)/daily-telemetry-setvars.sh
 
 cd $ETL_HOME
 LOG=$ETL_HOME/logs/daily-telemetry-validation_aggregates.log
