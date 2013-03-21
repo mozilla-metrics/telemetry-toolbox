@@ -27,10 +27,5 @@ else
    exit 3
 fi
 
-hadoop fs -getmerge slowsql-main-$YESTERDAY-$YESTERDAY /tmp/slowsql-main-$YESTERDAY-$YESTERDAY.txt
-cat $ETL_HOME/telemetry/slowsql/header.txt > $ETL_HOME/telemetry/slowsql/slowsql-main-$YESTERDAY-$YESTERDAY.txt
-cat /tmp/slowsql-main-$YESTERDAY-$YESTERDAY.txt >> $ETL_HOME/telemetry/slowsql/slowsql-main-$YESTERDAY-$YESTERDAY.txt
-
-hadoop fs -getmerge slowsql-other-$YESTERDAY-$YESTERDAY /tmp/slowsql-other-$YESTERDAY-$YESTERDAY.txt
-cat $ETL_HOME/telemetry/slowsql/header.txt > $ETL_HOME/telemetry/slowsql/slowsql-other-$YESTERDAY-$YESTERDAY.txt
-cat /tmp/slowsql-other-$YESTERDAY-$YESTERDAY.txt >> $ETL_HOME/telemetry/slowsql/slowsql-other-$YESTERDAY-$YESTERDAY.txt
+hadoop fs -getmerge slowsql-main-$YESTERDAY-$YESTERDAY $ETL_HOME/telemetry/slowsql/slowsql-main-$YESTERDAY-$YESTERDAY.txt
+hadoop fs -getmerge slowsql-other-$YESTERDAY-$YESTERDAY $ETL_HOME/telemetry/slowsql/slowsql-other-$YESTERDAY-$YESTERDAY.txt
