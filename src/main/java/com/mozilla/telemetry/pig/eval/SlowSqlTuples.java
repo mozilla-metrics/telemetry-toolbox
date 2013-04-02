@@ -59,7 +59,9 @@ public class SlowSqlTuples  extends EvalFunc<DataBag> {
                 while (bagIter.hasNext()) {
                     Tuple inner = bagIter.next();
                     for (int i=0; i < inner.size(); i++) {
-                        t.append(((Number)inner.get(i)).longValue());
+                        Number innerNumber = (Number)inner.get(i);
+                        if (innerNumber != null)
+                            t.append(innerNumber.longValue());
                     }
                 }
                 output.add(t);
