@@ -213,11 +213,6 @@ public class ValidateTelemetrySubmission extends EvalFunc<String> {
                 jsonMap.put(TelemetryConstants.INFO, info);
             }
 
-            if (appVersion == null) {
-                info.put(TelemetryConstants.VALID_FOR_SCHEMA, "false");
-                return jsonMapper.writeValueAsString(jsonMap);
-            }
-
             Map<String, Map<String, Object>> referenceValues = getJsonSpec(appVersion);
             if (referenceValues == null) {
                 LOG.info("referenceValues is null " + appVersion);
@@ -225,6 +220,10 @@ public class ValidateTelemetrySubmission extends EvalFunc<String> {
             pigCounterHelper.incrCounter(ReportStats.SUBMISSIONS_EVALUATED, 1L);
 
             Map<String, Object> histograms = (Map<String, Object>)jsonMap.get(TelemetryConstants.HISTOGRAMS);
+            if (histograms == null || appVersion == null) {
+                info.put(TelemetryConstants.VALID_FOR_SCHEMA, "false");
+                return jsonMapper.writeValueAsString(jsonMap);
+            }
             boolean validForSchema = true;
             for (Map.Entry<String, Object> entry : histograms.entrySet()) {
                 String jKey = entry.getKey();
@@ -275,8 +274,7 @@ public class ValidateTelemetrySubmission extends EvalFunc<String> {
                         validHistogram = false;
                         pigCounterHelper.incrCounter(ReportStats.INVALID_HISTOGRAM_BUCKET_COUNT, 1L);
                     }
-
-                    if (bucketValues.size() <= 0) {
+                    if (bucketValues == null || bucketValues.size() <= 0) {
                         pigCounterHelper.incrCounter(ReportStats.NO_HISTOGRAM_BUCKET_VALUES, 1L);
                         validHistogram = false;
                     } else {
