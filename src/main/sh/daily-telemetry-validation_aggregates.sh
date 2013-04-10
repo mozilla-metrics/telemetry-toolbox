@@ -3,7 +3,8 @@
 . $(dirname $0)/daily-telemetry-setvars.sh
 
 cd $ETL_HOME
-LOG=$ETL_HOME/logs/daily-telemetry-validation_aggregates.log
+LOG_FINAL=$ETL_HOME/logs/daily-telemetry-validation_aggregates.log
+LOG=$LOG_FINAL.$YESTERDAY
 
 # Telemetry Validation
 ${PIG_HOME}/bin/pig -f $ETL_HOME/validate_telemetry_submissions.pig -p start_date=$YESTERDAY -p end_date=$YESTERDAY -p input_table=telemetry -p output_table=telemetry > $LOG 2>&1
@@ -34,3 +35,5 @@ else
    echo "ERROR: Telemetry Aggregation failed (code $AGGREGATE_RESULT) for $YESTERDAY.  Check $LOG for more details."
    exit 3
 fi
+
+mv $LOG $LOG_FINAL

@@ -3,7 +3,8 @@
 . $(dirname $0)/daily-telemetry-setvars.sh
 
 cd $ETL_HOME
-LOG=$ETL_HOME/logs/daily-telemetry-chromehangs.log
+LOG_FINAL=$ETL_HOME/logs/daily-telemetry-chromehangs.log
+LOG=$LOG_FINAL.$YESTERDAY
 
 # Telemetry Chrome Hangs
 ${PIG_HOME}/bin/pig -param start_date=$YESTERDAY -param end_date=$YESTERDAY $ETL_HOME/telemetry_chrome_hangs.pig > $LOG 2>&1
@@ -36,8 +37,12 @@ if [ $size -gt 0 ]; then
       echo "Successfully exported Chrome Hangs"
    else
       echo "ERROR: Failed to export Chrome Hangs"
+      exit 4
    fi
 else
    echo "ERROR: Symbolicated Chrome Hangs file was empty."
+   exit 5
 fi
 rm $ETL_HOME/telemetry/chromehangs/chrome-hangs-$YESTERDAY.txt
+
+mv $LOG $LOG_FINAL
