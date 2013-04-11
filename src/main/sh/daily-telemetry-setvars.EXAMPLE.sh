@@ -20,5 +20,6 @@ VALID_INDEX_NAME="telemetry_agg_valid_$YESTERDAY_YYYY_MM"
 PUB_SERVER=example.mozilla.com
 HDFS_EXPORT_PATH=hdfs://example.mozilla.com:8020/user/$USER
 CHROMEHANG_DEST=${PUB_SERVER}:/var/www/public/telemetry/chrome-hangs/
+SHUTDOWN_TIMES_DEST=${PUB_SERVER}:/var/www/public/telemetry/shutdown-times/
 FLASH_VERSIONS_PATH=/var/www/public/telemetry
 FLASH_VERSIONS_DEST=${PUB_SERVER}:${FLASH_VERSIONS_PATH}
