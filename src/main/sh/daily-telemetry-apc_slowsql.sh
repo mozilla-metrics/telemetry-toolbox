@@ -3,7 +3,8 @@
 . $(dirname $0)/daily-telemetry-setvars.sh
 
 cd $ETL_HOME
-LOG=$ETL_HOME/logs/daily-telemetry-apc_slowsql.log
+LOG_FINAL=$ETL_HOME/logs/daily-telemetry-apc_slowsql.log
+LOG=$LOG_FINAL.$YESTERDAY
 
 # Telemetry Addon Privacy Correction (must run before slow sql)
 ${PIG_HOME}/bin/pig -param start_date=$YESTERDAY -param end_date=$YESTERDAY $ETL_HOME/telemetry_apc.pig > $LOG 2>&1
@@ -29,3 +30,5 @@ fi
 
 hadoop fs -getmerge slowsql-main-$YESTERDAY-$YESTERDAY $ETL_HOME/telemetry/slowsql/slowsql-main-$YESTERDAY-$YESTERDAY.txt
 hadoop fs -getmerge slowsql-other-$YESTERDAY-$YESTERDAY $ETL_HOME/telemetry/slowsql/slowsql-other-$YESTERDAY-$YESTERDAY.txt
+
+mv $LOG $LOG_FINAL

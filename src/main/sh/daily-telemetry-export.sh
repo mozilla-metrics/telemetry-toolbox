@@ -3,7 +3,8 @@
 . $(dirname $0)/daily-telemetry-setvars.sh
 
 cd $ETL_HOME
-LOG=$ETL_HOME/logs/daily-telemetry-export.log
+LOG_FINAL=$ETL_HOME/logs/daily-telemetry-export.log
+LOG=$LOG_FINAL.$YESTERDAY
 
 # Telemetry Export
 ${PIG_HOME}/bin/pig -param start_date=$YESTERDAY -param end_date=$YESTERDAY -param output=${HDFS_EXPORT_PATH}/telemetry-export-$YESTERDAY $ETL_HOME/telemetry_export.pig > $LOG 2>&1
@@ -15,3 +16,5 @@ else
    echo "ERROR: Telemetry Export failed (code $EXPORT_RESULT) for $YESTERDAY.  Check $LOG for more details."
    exit 2
 fi
+
+mv $LOG $LOG_FINAL

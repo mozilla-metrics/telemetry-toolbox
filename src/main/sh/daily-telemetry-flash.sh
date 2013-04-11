@@ -3,7 +3,8 @@
 . $(dirname $0)/daily-telemetry-setvars.sh
 
 cd $ETL_HOME
-LOG=$ETL_HOME/logs/daily-telemetry-flash.log
+LOG_FINAL=$ETL_HOME/logs/daily-telemetry-flash.log
+LOG=$LOG_FINAL.$YESTERDAY
 
 # Telemetry Flash Versions
 ${PIG_HOME}/bin/pig -param start_date=$YESTERDAY -param end_date=$YESTERDAY $ETL_HOME/telemetry_flash_versions.pig > $LOG 2>&1
@@ -46,5 +47,8 @@ if [ "$?" -eq "0" ]; then
    echo "Mobile Flash Versions exported successfully"
 else
    echo "ERROR: Failed to export Mobile Flash Versions"
+   exit 4
 fi
 ssh $PUB_SERVER "chmod 644 $FLASH_VERSIONS_PATH/mobile-flash-versions/telemetry-mobile-flash-versions-$YESTERDAY-$YESTERDAY.csv"
+
+mv $LOG $LOG_FINAL
