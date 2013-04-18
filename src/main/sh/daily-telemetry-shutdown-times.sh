@@ -27,7 +27,7 @@ if [ "$?" -ne "0" ]; then
    exit 3
 fi
 
-tar cvzf shutdown-times-$YESTERDAY-$YESTERDAY.csv.tar.gz shutdown-times-$YESTERDAY-$YESTERDAY.csv >> $LOG 2>&1
+tar cvzf shutdown-times-$YESTERDAY-$YESTERDAY.csv.tar.gz shutdown-times-$YESTERDAY-$YESTERDAY.csv --remove-files >> $LOG 2>&1
 if [ "$?" -ne "0" ]; then
    echo "ERROR: Failed to compress Shutdown Times. Check $LOG for details."
    exit 4
