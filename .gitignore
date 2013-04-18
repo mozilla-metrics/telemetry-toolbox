@@ -4,6 +4,10 @@ target
 .classpath
 .settings
 
+# Production configuration #
+############################
+daily-telemetry-setvars.sh
+
 # Compiled source #
 ###################
 *.com
