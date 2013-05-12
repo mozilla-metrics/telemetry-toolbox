@@ -1,3 +1,5 @@
+register '/usr/lib/hbase/lib/zookeeper.jar'
+register '/usr/lib/hbase/hbase-0.90.6-cdh3u4.jar'
 register 'akela-0.5-SNAPSHOT.jar'
 register 'telemetry-toolbox-0.2-SNAPSHOT.jar'
 register 'jackson-core-2.0.6.jar'
