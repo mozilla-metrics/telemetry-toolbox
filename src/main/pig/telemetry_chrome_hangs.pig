@@ -10,6 +10,7 @@ register 'jackson-annotations-2.0.6.jar'
 SET pig.logfile telemetry-chrome-hangs.log;
 SET mapred.compress.map.output true;
 SET mapred.map.output.compression.codec org.apache.hadoop.io.compress.SnappyCodec;
+SET mapred.output.compress false;
 
 define IsMap com.mozilla.pig.filter.map.IsMap();
 define Size com.mozilla.pig.eval.Size();
