@@ -213,6 +213,12 @@ public class ValidateTelemetrySubmission extends EvalFunc<String> {
                 jsonMap.put(TelemetryConstants.INFO, info);
             }
 
+            if (appVersion == null) {
+                LOG.info("appVersion is null");
+                info.put(TelemetryConstants.VALID_FOR_SCHEMA, "false");
+                return jsonMapper.writeValueAsString(jsonMap);
+            }
+
             Map<String, Map<String, Object>> referenceValues = getJsonSpec(appVersion);
             if (referenceValues == null) {
                 LOG.info("referenceValues is null " + appVersion);
@@ -220,7 +226,7 @@ public class ValidateTelemetrySubmission extends EvalFunc<String> {
             pigCounterHelper.incrCounter(ReportStats.SUBMISSIONS_EVALUATED, 1L);
 
             Map<String, Object> histograms = (Map<String, Object>)jsonMap.get(TelemetryConstants.HISTOGRAMS);
-            if (histograms == null || appVersion == null) {
+            if (histograms == null) {
                 info.put(TelemetryConstants.VALID_FOR_SCHEMA, "false");
                 return jsonMapper.writeValueAsString(jsonMap);
             }
