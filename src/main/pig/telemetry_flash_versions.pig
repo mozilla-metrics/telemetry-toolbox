@@ -11,6 +11,7 @@ SET pig.tmpfilecompression true;
 SET pig.tmpfilecompression.codec lzo;
 SET mapred.compress.map.output true;
 SET mapred.map.output.compression.codec org.apache.hadoop.io.compress.SnappyCodec;
+SET mapred.output.compress false;
 
 define ConvertNull com.mozilla.pig.eval.ConvertNull('NA');
 define OsVersionNormalizer com.mozilla.pig.eval.regex.FindOrReturn('^[0-9](\\.*[0-9]*){1}');
