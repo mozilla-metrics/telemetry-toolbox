@@ -6,6 +6,18 @@ cd $ETL_HOME
 LOG_FINAL=$ETL_HOME/logs/daily-telemetry-flash.log
 LOG=$LOG_FINAL.$YESTERDAY
 
+if [ ! -z "$DELETE" ]; then
+   echo "Deleting flash versions for $YESTERDAY..."
+   hadoop fs -rmr telemetry-flash-versions-$YESTERDAY-$YESTERDAY
+   rm -v /tmp/telemetry-flash-versions-$YESTERDAY-$YESTERDAY.csv
+   rm -v $ETL_HOME/telemetry/flash-versions/telemetry-flash-versions-$YESTERDAY-$YESTERDAY.csv
+
+   echo "Deleting mobile flash versions for $YESTERDAY..."
+   hadoop fs -rmr telemetry-mobile-flash-versions-$YESTERDAY-$YESTERDAY
+   rm -v /tmp/telemetry-mobile-flash-versions-$YESTERDAY-$YESTERDAY.csv
+   rm -v $ETL_HOME/telemetry/mobile-flash-versions/telemetry-mobile-flash-versions-$YESTERDAY-$YESTERDAY.csv
+fi
+
 # Telemetry Flash Versions
 ${PIG_HOME}/bin/pig -param start_date=$YESTERDAY -param end_date=$YESTERDAY $ETL_HOME/telemetry_flash_versions.pig > $LOG 2>&1
 FLASH_RESULT=$?
