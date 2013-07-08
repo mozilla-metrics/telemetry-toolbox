@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.mozilla</groupId>
 	<artifactId>telemetry-toolbox</artifactId>
-	<version>0.2-SNAPSHOT</version>
+	<version>0.3-SNAPSHOT</version>
 	<name>telemetry-toolbox</name>
 	<description>A library of tools for dealing with Mozilla Telemetry data.</description>
 	<url>https://github.com/mozilla-metrics/telemetry-toolbox</url>
