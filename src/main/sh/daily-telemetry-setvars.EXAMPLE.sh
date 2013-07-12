@@ -1,6 +1,9 @@
 #!/bin/bash
 
 export JAVA_HOME=/usr/lib/jvm/java-sun
+export HADOOP_CONF_DIR=/etc/hadoop/conf
+export PIG_CLASSPATH=$HADOOP_CONF_DIR
+
 PIG_HOME=/usr/lib/pig
 ETL_HOME=/home/etl
 ES_CONFIG=$ETL_HOME/elasticsearch/elasticsearch.yml

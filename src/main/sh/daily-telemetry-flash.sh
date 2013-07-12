@@ -8,12 +8,12 @@ LOG=$LOG_FINAL.$YESTERDAY
 
 if [ ! -z "$DELETE" ]; then
    echo "Deleting flash versions for $YESTERDAY..."
-   hadoop fs -rmr telemetry-flash-versions-$YESTERDAY-$YESTERDAY
+   hadoop fs -rm -r telemetry-flash-versions-$YESTERDAY-$YESTERDAY
    rm -v /tmp/telemetry-flash-versions-$YESTERDAY-$YESTERDAY.csv
    rm -v $ETL_HOME/telemetry/flash-versions/telemetry-flash-versions-$YESTERDAY-$YESTERDAY.csv
 
    echo "Deleting mobile flash versions for $YESTERDAY..."
-   hadoop fs -rmr telemetry-mobile-flash-versions-$YESTERDAY-$YESTERDAY
+   hadoop fs -rm -r telemetry-mobile-flash-versions-$YESTERDAY-$YESTERDAY
    rm -v /tmp/telemetry-mobile-flash-versions-$YESTERDAY-$YESTERDAY.csv
    rm -v $ETL_HOME/telemetry/mobile-flash-versions/telemetry-mobile-flash-versions-$YESTERDAY-$YESTERDAY.csv
 fi
