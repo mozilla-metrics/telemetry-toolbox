@@ -6,6 +6,15 @@ cd $ETL_HOME
 LOG_FINAL=$ETL_HOME/logs/daily-telemetry-chromehangs.log
 LOG=$LOG_FINAL.$YESTERDAY
 
+if [ ! -z "$DELETE" ]; then
+   echo "Deleting Chrome hangs for $YESTERDAY..."
+   hadoop fs -rm -r chrome-hangs-$YESTERDAY-$YESTERDAY
+   rm -v $ETL_HOME/telemetry/chromehangs/chrome-hangs-$YESTERDAY.txt
+   rm -v $ETL_HOME/telemetry/chromehangs/chrome-hangs-$YESTERDAY.modified
+   rm -v $ETL_HOME/telemetry/chromehangs/chrome-hangs-$YESTERDAY.txt.gz
+   # Don't need to clean up on $CHROMEHANG_DEST since scp will overwrite
+fi
+
 # Telemetry Chrome Hangs
 ${PIG_HOME}/bin/pig -param start_date=$YESTERDAY -param end_date=$YESTERDAY $ETL_HOME/telemetry_chrome_hangs.pig > $LOG 2>&1
 CHROME_RESULT=$?
