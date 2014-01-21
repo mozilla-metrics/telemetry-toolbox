@@ -58,7 +58,7 @@ public class AddonPrivacyCorrection extends EvalFunc<String> {
         patterns = new ArrayList<Pattern>();
         Pattern singleQuoteLiteral = Pattern.compile("'[^'\\\\]*(?:\\\\.[^'\\\\]*)*'");
         patterns.add(singleQuoteLiteral);
-        Pattern doubleQuoteLiteral = Pattern.compile("'[^\"\\\\]*(?:\\\\.[^\"\\\\]*)*\"");
+        Pattern doubleQuoteLiteral = Pattern.compile("\"[^\"\\\\]*(?:\\\\.[^\"\\\\]*)*\"");
         patterns.add(doubleQuoteLiteral);
     }
     

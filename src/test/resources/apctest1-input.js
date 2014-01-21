@@ -8,6 +8,7 @@
             "SELECT * FROM moz_places WHERE url LIKE '%facebook.com/blah%' ORDER BY frecency DESC LIMIT 3": [5, 1000],
             "SELECT * FROM moz_places WHERE url LIKE '%twitter.com/blah%' ORDER BY frecency DESC LIMIT 3": [5, 1000],
             "SELECT * FROM moz_places WHERE domain IN ('twitter.com','facebook.com')": [5, 1000],
+            "SELECT * FROM moz_places WHERE domain IN (\"twitter.com\",\"facebook.com\")": [5, 1000],
             "SELECT * FROM moz_places WHERE domain NOT IN('twitter.com','facebook.com')": [5, 1000]
         }
     }
